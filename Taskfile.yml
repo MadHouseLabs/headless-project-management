@@ -1,0 +1,97 @@
+version: '3'
+
+vars:
+  BINARY: bin/server
+  MAIN: cmd/server/main.go
+
+tasks:
+  default:
+    desc: Show available tasks
+    cmds:
+      - task --list
+
+  build:
+    desc: Build the server binary
+    cmds:
+      - go build -o {{.BINARY}} {{.MAIN}}
+    sources:
+      - '**/*.go'
+      - go.mod
+      - go.sum
+    generates:
+      - '{{.BINARY}}'
+
+  run:
+    desc: Build and run the server
+    deps: [build]
+    cmds:
+      - '{{.BINARY}}'
+
+  dev:
+    desc: Run server in development mode with hot reload
+    cmds:
+      - go run {{.MAIN}}
+
+  clean:
+    desc: Clean build artifacts and data
+    cmds:
+      - rm -rf bin/
+      - rm -rf data/
+
+  test:
+    desc: Run all tests
+    cmds:
+      - go test -v ./...
+
+  test:coverage:
+    desc: Run tests with coverage
+    cmds:
+      - go test -v -cover ./...
+
+  deps:
+    desc: Download and tidy dependencies
+    cmds:
+      - go mod download
+      - go mod tidy
+
+  install:
+    desc: Install dependencies and build
+    deps: [deps, build]
+    cmds:
+      - echo "Server built successfully at {{.BINARY}}"
+
+  lint:
+    desc: Run Go linter
+    cmds:
+      - golangci-lint run || true
+
+  fmt:
+    desc: Format Go code
+    cmds:
+      - go fmt ./...
+
+  api:test:
+    desc: Test API endpoints
+    deps: [build]
+    cmds:
+      - |
+        {{.BINARY}} -config config.json &
+        SERVER_PID=$!
+        sleep 2
+        curl -s http://localhost:8080/health | jq '.'
+        kill $SERVER_PID
+
+  mcp:tools:
+    desc: List available MCP tools
+    cmds:
+      - curl -s http://localhost:8080/api/mcp/tools | jq '.'
+
+  docker:build:
+    desc: Build Docker image
+    cmds:
+      - docker build -t headless-pm:latest .
+
+  docker:run:
+    desc: Run Docker container
+    cmds:
+      - docker run -p 8080:8080 -v $(pwd)/data:/app/data headless-pm:latest
