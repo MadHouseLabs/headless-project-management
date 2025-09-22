@@ -74,7 +74,7 @@ func (db *Database) CreateProject(project *models.Project) error {
 
 func (db *Database) GetProject(id uint) (*models.Project, error) {
 	var project models.Project
-	err := db.Preload("Tasks").First(&project, id).Error
+	err := db.Preload("Tasks").Preload("Epics").First(&project, id).Error
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +87,7 @@ func (db *Database) ListProjects(status *models.ProjectStatus) ([]models.Project
 	if status != nil {
 		query = query.Where("status = ?", *status)
 	}
-	err := query.Find(&projects).Error
+	err := query.Preload("Tasks").Preload("Epics").Find(&projects).Error
 	return projects, err
 }
 

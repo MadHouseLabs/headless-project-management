@@ -4,135 +4,247 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Task #{{.Task.ID}} - {{.Task.Title}}</title>
-    <link rel="stylesheet" href="/static/css/style.iVD6YFX6.css">
+    <link rel="stylesheet" href="/static/css/style.DoC8pV50.css">
+    <style>
+        .breadcrumb {
+            margin-bottom: 2rem;
+            font-size: 13px;
+        }
+        .breadcrumb a {
+            color: #666;
+        }
+        .tabs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid #e0e0e0;
+            padding-bottom: 0;
+        }
+        .tab {
+            padding: 0.5rem 1rem;
+            color: #666;
+            text-decoration: none;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -1px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+        .tab.active {
+            color: #000;
+            border-bottom-color: #06c;
+        }
+        .tab:hover {
+            color: #000;
+            border-bottom-color: #e0e0e0;
+        }
+        .task-header-box {
+            background: #fff;
+            border: 1px solid #e0e0e0;
+            padding: 1.5rem;
+            border-radius: 3px;
+            margin-bottom: 2rem;
+        }
+        .task-meta {
+            display: flex;
+            gap: 2rem;
+            margin-top: 1rem;
+        }
+        .meta-item {
+            display: flex;
+            flex-direction: column;
+        }
+        .meta-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #666;
+            margin-bottom: 0.25rem;
+        }
+        .meta-value {
+            font-weight: 500;
+        }
+        .description-section {
+            background: #fff;
+            border: 1px solid #e0e0e0;
+            padding: 1.5rem;
+            border-radius: 3px;
+            margin-bottom: 2rem;
+        }
+        .details-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 2rem;
+        }
+        .detail-box {
+            background: #fff;
+            border: 1px solid #e0e0e0;
+            padding: 1rem;
+            border-radius: 3px;
+        }
+        .label-chip {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 11px;
+            margin-right: 0.5rem;
+        }
+        .comment {
+            background: #fff;
+            border: 1px solid #e0e0e0;
+            padding: 1rem;
+            border-radius: 3px;
+            margin-bottom: 1rem;
+        }
+        .comment-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+        }
+    </style>
 </head>
 <body>
-    <nav style="display: flex; justify-content: space-between; align-items: center;">
-        <div>
-            <a href="/">Projects</a>
-            <span class="muted">/</span>
-            <a href="/{{.ProjectID}}">{{.Task.Project.Name}}</a>
-            <span class="muted">/ Task #{{.Task.ID}}</span>
-        </div>
-        <div>
-            <a href="/{{.ProjectID}}">View Tasks</a>
-            <span class="muted">|</span>
-            <a href="/{{.ProjectID}}/epics">Manage Epics</a>
-        </div>
-    </nav>
+    <div class="breadcrumb">
+        <a href="/">Projects</a> / <a href="/projects/{{.ProjectID}}">{{.Task.Project.Name}}</a> / <a href="/projects/{{.ProjectID}}/tasks">Tasks</a> / <strong>#{{.Task.ID}}</strong>
+    </div>
 
     <header>
-        <h1>{{.Task.Title}}</h1>
-        <div class="task-meta">
-            <span class="status-{{.Task.Status}}">{{.Task.Status}}</span>
-            <span class="muted">•</span>
-            <span class="{{if eq .Task.Priority "urgent"}}priority-u{{else if eq .Task.Priority "high"}}priority-h{{else if eq .Task.Priority "medium"}}priority-m{{else}}priority-l{{end}}">
-                {{.Task.Priority}} priority
-            </span>
-            {{if .Task.Assignee}}
-            <span class="muted">•</span>
-            <span>Assigned to <strong>{{.Task.Assignee}}</strong></span>
-            {{end}}
-        </div>
+        <h1>{{.Task.Project.Name}}</h1>
+        <p>
+            <span class="status-{{.Task.Project.Status}}">● {{.Task.Project.Status}}</span>
+            <span class="muted">• Task Details</span>
+        </p>
     </header>
 
-    <section class="task-content">
-        <h3>Description</h3>
-        <div class="content-box">
-            {{if .Task.Description}}
-            <p>{{.Task.Description}}</p>
-            {{else}}
-            <p class="muted">No description provided</p>
-            {{end}}
-        </div>
-    </section>
+    <div class="tabs">
+        <a href="/projects/{{.ProjectID}}" class="tab">Overview</a>
+        <a href="/projects/{{.ProjectID}}/tasks" class="tab active">Tasks</a>
+        <a href="/projects/{{.ProjectID}}/epics" class="tab">Epics</a>
+    </div>
 
-    <section class="task-info">
-        <h3>Details</h3>
-        <table class="info-table">
-            <tr>
-                <th>Status</th>
-                <td><span class="status-{{.Task.Status}}">{{.Task.Status}}</span></td>
-                <th>Priority</th>
-                <td><span class="{{if eq .Task.Priority "urgent"}}priority-u{{else if eq .Task.Priority "high"}}priority-h{{else if eq .Task.Priority "medium"}}priority-m{{else}}priority-l{{end}}">{{.Task.Priority}}</span></td>
-            </tr>
-            <tr>
-                <th>Assignee</th>
-                <td>{{if .Task.Assignee}}{{.Task.Assignee}}{{else}}<span class="muted">Unassigned</span>{{end}}</td>
-                <th>Due Date</th>
-                <td>{{if .Task.DueDate}}{{.Task.DueDate.Format "Jan 2, 2006"}}{{else}}<span class="muted">Not set</span>{{end}}</td>
-            </tr>
-            <tr>
-                <th>Created</th>
-                <td>{{.Task.CreatedAt.Format "Jan 2, 2006 at 3:04 PM"}}</td>
-                <th>Updated</th>
-                <td>{{.Task.UpdatedAt.Format "Jan 2, 2006 at 3:04 PM"}}</td>
-            </tr>
-            {{if .Task.EstimatedHours}}
-            <tr>
-                <th>Estimated</th>
-                <td colspan="3">{{.Task.EstimatedHours}} hours</td>
-            </tr>
-            {{end}}
-        </table>
-    </section>
-
-    {{if .Task.Subtasks}}
-    <section>
-        <h3>Subtasks</h3>
-        <div class="content-box">
-            {{range .Task.Subtasks}}
-            <div class="subtask-item">
-                <span class="{{if eq .Status "done"}}done{{end}}">
-                    {{if eq .Status "done"}}☑{{else}}☐{{end}} {{.Title}}
-                </span>
-            </div>
-            {{end}}
-        </div>
-    </section>
-    {{end}}
-
-    {{if .Task.Labels}}
-    <section>
-        <h3>Labels</h3>
-        <div class="labels-list">
-            {{range .Task.Labels}}
-            <span class="label" style="background: {{.Color}}20; color: {{.Color}}">{{.Name}}</span>
-            {{end}}
-        </div>
-    </section>
-    {{end}}
-
-    {{if .Task.Comments}}
-    <section>
-        <h3>Comments ({{len .Task.Comments}})</h3>
-        {{range .Task.Comments}}
-        <div class="comment">
-            <div class="comment-header">
-                <strong>{{.UserName}}</strong>
-                <span class="muted">{{.CreatedAt.Format "Jan 2, 2006 at 3:04 PM"}}</span>
-            </div>
-            <div class="comment-body">
-                {{.Content}}
+    <main>
+        <div class="task-header-box">
+            <h2>{{.Task.Title}}</h2>
+            <div class="task-meta">
+                <div class="meta-item">
+                    <span class="meta-label">Status</span>
+                    <span class="meta-value status-{{.Task.Status}}">● {{.Task.Status}}</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Priority</span>
+                    <span class="meta-value">
+                        {{if eq .Task.Priority "urgent"}}
+                            <span style="color: #dc2626;">● Urgent</span>
+                        {{else if eq .Task.Priority "high"}}
+                            <span style="color: #ea580c;">● High</span>
+                        {{else if eq .Task.Priority "medium"}}
+                            <span style="color: #ca8a04;">● Medium</span>
+                        {{else}}
+                            <span style="color: #16a34a;">● Low</span>
+                        {{end}}
+                    </span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Assignee</span>
+                    <span class="meta-value">{{if .Task.Assignee}}{{.Task.Assignee}}{{else}}<span class="muted">Unassigned</span>{{end}}</span>
+                </div>
+                {{if .Task.DueDate}}
+                <div class="meta-item">
+                    <span class="meta-label">Due Date</span>
+                    <span class="meta-value">{{.Task.DueDate.Format "Jan 2, 2006"}}</span>
+                </div>
+                {{end}}
+                {{if .Task.EstimatedHours}}
+                <div class="meta-item">
+                    <span class="meta-label">Estimated</span>
+                    <span class="meta-value">{{.Task.EstimatedHours}}h</span>
+                </div>
+                {{end}}
             </div>
         </div>
+
+        {{if .Task.Description}}
+        <section>
+            <h3>Description</h3>
+            <div class="description-section">
+                {{.Task.Description}}
+            </div>
+        </section>
         {{end}}
-    </section>
-    {{end}}
 
-    {{if .Task.Attachments}}
-    <section>
-        <h3>Attachments</h3>
-        <div class="content-box">
-            {{range .Task.Attachments}}
-            <div class="attachment-item">
-                📎 <a href="{{.FilePath}}">{{.FileName}}</a>
-            </div>
-            {{else}}
-            <p class="muted">No attachments</p>
-            {{end}}
+        <div class="details-grid">
+            <section>
+                <h3>Details</h3>
+                <div class="detail-box">
+                    <dl style="margin: 0;">
+                        <dt style="font-size: 11px; text-transform: uppercase; color: #666; margin-bottom: 0.25rem;">Task ID</dt>
+                        <dd style="margin-bottom: 1rem;">#{{.Task.ID}}</dd>
+
+                        <dt style="font-size: 11px; text-transform: uppercase; color: #666; margin-bottom: 0.25rem;">Created</dt>
+                        <dd style="margin-bottom: 1rem;">{{.Task.CreatedAt.Format "Jan 2, 2006 at 3:04 PM"}}</dd>
+
+                        <dt style="font-size: 11px; text-transform: uppercase; color: #666; margin-bottom: 0.25rem;">Last Updated</dt>
+                        <dd style="margin-bottom: 1rem;">{{.Task.UpdatedAt.Format "Jan 2, 2006 at 3:04 PM"}}</dd>
+
+                        {{if .Task.CompletedAt}}
+                        <dt style="font-size: 11px; text-transform: uppercase; color: #666; margin-bottom: 0.25rem;">Completed</dt>
+                        <dd>{{.Task.CompletedAt.Format "Jan 2, 2006 at 3:04 PM"}}</dd>
+                        {{end}}
+                    </dl>
+                </div>
+
+                {{if .Task.Labels}}
+                <h3 style="margin-top: 2rem;">Labels</h3>
+                <div class="detail-box">
+                    {{range .Task.Labels}}
+                    <span class="label-chip" style="background: {{.Color}}20; color: {{.Color}}">{{.Name}}</span>
+                    {{end}}
+                </div>
+                {{end}}
+            </section>
+
+            <section>
+                {{if .Task.Subtasks}}
+                <h3>Subtasks</h3>
+                <div class="detail-box">
+                    {{range .Task.Subtasks}}
+                    <div style="padding: 0.5rem 0; border-bottom: 1px solid #f0f0f0;">
+                        <span class="{{if eq .Status "done"}}status-done{{end}}">
+                            {{if eq .Status "done"}}✓{{else}}○{{end}} {{.Title}}
+                        </span>
+                    </div>
+                    {{end}}
+                </div>
+                {{end}}
+
+                {{if .Task.Attachments}}
+                <h3 style="margin-top: 2rem;">Attachments</h3>
+                <div class="detail-box">
+                    {{range .Task.Attachments}}
+                    <div style="padding: 0.5rem 0;">
+                        📎 <a href="{{.FilePath}}">{{.FileName}}</a>
+                    </div>
+                    {{else}}
+                    <p class="muted">No attachments</p>
+                    {{end}}
+                </div>
+                {{end}}
+            </section>
         </div>
-    </section>
-    {{end}}
+
+        {{if .Task.Comments}}
+        <section style="margin-top: 2rem;">
+            <h3>Comments ({{len .Task.Comments}})</h3>
+            {{range .Task.Comments}}
+            <div class="comment">
+                <div class="comment-header">
+                    <strong>{{.Author}}</strong>
+                    <span class="muted" style="font-size: 11px;">{{.CreatedAt.Format "Jan 2, 2006 at 3:04 PM"}}</span>
+                </div>
+                <div>{{.Content}}</div>
+            </div>
+            {{end}}
+        </section>
+        {{end}}
+    </main>
 </body>
 </html>

@@ -4,118 +4,215 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{.Epic.Name}} - Epic Details</title>
-    <link rel="stylesheet" href="/static/css/style.iVD6YFX6.css">
+    <link rel="stylesheet" href="/static/css/style.DoC8pV50.css">
+    <style>
+        .breadcrumb {
+            margin-bottom: 2rem;
+            font-size: 13px;
+        }
+        .breadcrumb a {
+            color: #666;
+        }
+        .tabs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid #e0e0e0;
+            padding-bottom: 0;
+        }
+        .tab {
+            padding: 0.5rem 1rem;
+            color: #666;
+            text-decoration: none;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -1px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+        .tab.active {
+            color: #000;
+            border-bottom-color: #06c;
+        }
+        .tab:hover {
+            color: #000;
+            border-bottom-color: #e0e0e0;
+        }
+        .epic-header {
+            background: #fff;
+            border: 1px solid #e0e0e0;
+            padding: 1.5rem;
+            border-radius: 3px;
+            margin-bottom: 2rem;
+        }
+        .epic-meta {
+            display: flex;
+            gap: 2rem;
+            margin-top: 1rem;
+        }
+        .meta-item {
+            display: flex;
+            flex-direction: column;
+        }
+        .meta-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #666;
+            margin-bottom: 0.25rem;
+        }
+        .meta-value {
+            font-weight: 500;
+        }
+        .progress-section {
+            background: #fff;
+            border: 1px solid #e0e0e0;
+            padding: 1.5rem;
+            border-radius: 3px;
+            margin-bottom: 2rem;
+        }
+        .progress-bar-large {
+            height: 24px;
+            background: #f0f0f0;
+            border-radius: 12px;
+            overflow: hidden;
+            margin: 1rem 0;
+        }
+        .progress-fill {
+            height: 100%;
+            background: #06c;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .task-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1rem;
+        }
+        .task-card {
+            background: #fff;
+            border: 1px solid #e0e0e0;
+            padding: 1rem;
+            border-radius: 3px;
+            transition: box-shadow 0.2s;
+        }
+        .task-card:hover {
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+    </style>
 </head>
 <body>
-    <nav style="display: flex; justify-content: space-between; align-items: center;">
-        <div>
-            <a href="/">Projects</a>
-            <span class="muted">/</span>
-            <a href="/{{.Project.ID}}">{{.Project.Name}}</a>
-            <span class="muted">/</span>
-            <a href="/{{.Project.ID}}/epics">Epics</a>
-            <span class="muted">/ Epic #{{.Epic.ID}}</span>
-        </div>
-        <div>
-            <a href="/{{.Project.ID}}">View Tasks</a>
-            <span class="muted">|</span>
-            <a href="/{{.Project.ID}}/epics">Manage Epics</a>
-        </div>
-    </nav>
+    <div class="breadcrumb">
+        <a href="/">Projects</a> / <a href="/projects/{{.Project.ID}}">{{.Project.Name}}</a> / <a href="/projects/{{.Project.ID}}/epics">Epics</a> / <strong>{{.Epic.Name}}</strong>
+    </div>
 
     <header>
-        <h1>{{.Epic.Name}}</h1>
-        <div class="task-meta">
-            <span class="status-{{.Epic.Status}}">{{.Epic.Status}}</span>
-            <span class="muted">•</span>
-            <span>{{.Epic.Progress}}% complete</span>
-            <span class="muted">•</span>
-            <span>{{.CompletedTasks}} of {{.TotalTasks}} tasks done</span>
-        </div>
+        <h1>{{.Project.Name}}</h1>
+        <p>
+            <span class="status-{{.Project.Status}}">● {{.Project.Status}}</span>
+            <span class="muted">• Epic Details</span>
+        </p>
     </header>
 
-    {{if .Epic.Description}}
-    <section>
-        <h3>Description</h3>
-        <p>{{.Epic.Description}}</p>
-    </section>
-    {{end}}
+    <div class="tabs">
+        <a href="/projects/{{.Project.ID}}" class="tab">Overview</a>
+        <a href="/projects/{{.Project.ID}}/tasks" class="tab">Tasks</a>
+        <a href="/projects/{{.Project.ID}}/epics" class="tab active">Epics</a>
+    </div>
 
-    <section>
-        <h3>Details</h3>
-        <dl>
-            <dt>Epic ID</dt>
-            <dd>#{{.Epic.ID}}</dd>
-
-            <dt>Project</dt>
-            <dd>{{.Project.Name}}</dd>
-
-            <dt>Status</dt>
-            <dd class="status-{{.Epic.Status}}">{{.Epic.Status}}</dd>
-
-            <dt>Progress</dt>
-            <dd>{{.Epic.Progress}}% ({{.CompletedTasks}} of {{.TotalTasks}} tasks completed)</dd>
-
-            <dt>Start Date</dt>
-            <dd>
+    <main>
+        <div class="epic-header">
+            <h2>{{.Epic.Name}}</h2>
+            {{if .Epic.Description}}
+            <p style="margin: 1rem 0; color: #666;">{{.Epic.Description}}</p>
+            {{end}}
+            <div class="epic-meta">
+                <div class="meta-item">
+                    <span class="meta-label">Status</span>
+                    <span class="meta-value status-{{.Epic.Status}}">● {{.Epic.Status}}</span>
+                </div>
                 {{if .Epic.StartDate}}
-                    {{.Epic.StartDate.Format "January 2, 2006"}}
-                {{else}}
-                    <span class="muted">Not set</span>
+                <div class="meta-item">
+                    <span class="meta-label">Start Date</span>
+                    <span class="meta-value">{{.Epic.StartDate.Format "Jan 2, 2006"}}</span>
+                </div>
                 {{end}}
-            </dd>
-
-            <dt>End Date</dt>
-            <dd>
                 {{if .Epic.EndDate}}
-                    {{.Epic.EndDate.Format "January 2, 2006"}}
-                {{else}}
-                    <span class="muted">Not set</span>
+                <div class="meta-item">
+                    <span class="meta-label">End Date</span>
+                    <span class="meta-value">{{.Epic.EndDate.Format "Jan 2, 2006"}}</span>
+                </div>
                 {{end}}
-            </dd>
+                <div class="meta-item">
+                    <span class="meta-label">Total Tasks</span>
+                    <span class="meta-value">{{.TotalTasks}}</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Completed</span>
+                    <span class="meta-value" style="color: #16a34a;">{{.CompletedTasks}}</span>
+                </div>
+            </div>
+        </div>
 
-            <dt>Created</dt>
-            <dd>{{.Epic.CreatedAt.Format "January 2, 2006 at 3:04 PM"}}</dd>
+        <div class="progress-section">
+            <h3>Progress</h3>
+            <div class="progress-bar-large">
+                <div class="progress-fill" style="width: {{.Epic.Progress}}%;">
+                    {{if gt .Epic.Progress 0}}{{.Epic.Progress}}%{{end}}
+                </div>
+            </div>
+            <p class="center muted">{{.CompletedTasks}} of {{.TotalTasks}} tasks completed</p>
+        </div>
 
-            <dt>Last Updated</dt>
-            <dd>{{.Epic.UpdatedAt.Format "January 2, 2006 at 3:04 PM"}}</dd>
-        </dl>
-    </section>
-
-    <section>
-        <h3>Tasks in this Epic</h3>
-        {{if .Epic.Tasks}}
-        <table>
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Title</th>
-                    <th>Status</th>
-                    <th>Priority</th>
-                    <th>Assignee</th>
-                </tr>
-            </thead>
-            <tbody>
+        <section>
+            <h3>Tasks in This Epic</h3>
+            {{if .Epic.Tasks}}
+            <div class="task-grid">
                 {{range .Epic.Tasks}}
-                <tr>
-                    <td>#{{.ID}}</td>
-                    <td><a href="/{{$.Project.ID}}/{{.ID}}">{{.Title}}</a></td>
-                    <td><span class="status-{{.Status}}">{{.Status}}</span></td>
-                    <td><span class="priority-{{.Priority | slice 0 1}}">{{.Priority}}</span></td>
-                    <td>
-                        {{if .Assignee}}
-                            {{.Assignee}}
-                        {{else}}
-                            <span class="muted">Unassigned</span>
+                <a href="/projects/{{$.Project.ID}}/tasks/{{.ID}}" style="text-decoration: none; color: inherit;">
+                    <div class="task-card">
+                        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.5rem;">
+                            <span class="muted" style="font-size: 12px;">#{{.ID}}</span>
+                            <span class="status-{{.Status}}" style="font-size: 11px;">● {{.Status}}</span>
+                        </div>
+                        <div style="font-weight: 500; margin-bottom: 0.5rem;">{{.Title}}</div>
+                        {{if .Description}}
+                        <div class="small muted" style="margin-bottom: 0.5rem;">{{.Description}}</div>
                         {{end}}
-                    </td>
-                </tr>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem;">
+                            <div>
+                                {{if eq .Priority "urgent"}}
+                                    <span style="color: #dc2626; font-size: 11px;">● Urgent</span>
+                                {{else if eq .Priority "high"}}
+                                    <span style="color: #ea580c; font-size: 11px;">● High</span>
+                                {{else if eq .Priority "medium"}}
+                                    <span style="color: #ca8a04; font-size: 11px;">● Medium</span>
+                                {{else}}
+                                    <span style="color: #16a34a; font-size: 11px;">● Low</span>
+                                {{end}}
+                            </div>
+                            <div class="small muted">
+                                {{if .Assignee}}{{.Assignee}}{{else}}Unassigned{{end}}
+                            </div>
+                        </div>
+                        {{if .DueDate}}
+                        <div style="margin-top: 0.5rem; font-size: 11px; color: #666;">
+                            Due: {{.DueDate.Format "Jan 2, 2006"}}
+                        </div>
+                        {{end}}
+                    </div>
+                </a>
                 {{end}}
-            </tbody>
-        </table>
-        {{else}}
-        <p class="muted">No tasks assigned to this epic yet. Use the API to assign tasks to this epic.</p>
-        {{end}}
-    </section>
+            </div>
+            {{else}}
+            <div class="content-box">
+                <p class="center muted">No tasks assigned to this epic yet.</p>
+            </div>
+            {{end}}
+        </section>
+    </main>
 </body>
 </html>

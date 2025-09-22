@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Project.Name}} - Overview</title>
+    <link rel="stylesheet" href="/static/css/style.DoC8pV50.css">
+    <style>
+        .breadcrumb {
+            margin-bottom: 2rem;
+            font-size: 13px;
+        }
+        .breadcrumb a {
+            color: #666;
+        }
+        .tabs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid #e0e0e0;
+            padding-bottom: 0;
+        }
+        .tab {
+            padding: 0.5rem 1rem;
+            color: #666;
+            text-decoration: none;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -1px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+        .tab.active {
+            color: #000;
+            border-bottom-color: #06c;
+        }
+        .tab:hover {
+            color: #000;
+            border-bottom-color: #e0e0e0;
+        }
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        .stat-box {
+            background: #fff;
+            border: 1px solid #e0e0e0;
+            padding: 1rem;
+            border-radius: 3px;
+        }
+        .stat-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #666;
+            margin-bottom: 0.25rem;
+        }
+        .stat-value {
+            font-size: 20px;
+            font-weight: 600;
+        }
+        .stat-sub {
+            font-size: 12px;
+            color: #999;
+            margin-top: 0.25rem;
+        }
+        .description-box {
+            background: #fff;
+            border: 1px solid #e0e0e0;
+            padding: 1.5rem;
+            border-radius: 3px;
+            margin-bottom: 2rem;
+        }
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 2rem;
+        }
+        .activity-item {
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+        .activity-title {
+            font-weight: 500;
+            margin-bottom: 0.25rem;
+        }
+        .activity-meta {
+            font-size: 11px;
+            color: #999;
+        }
+        .percentage {
+            font-size: 11px;
+            color: #666;
+            font-weight: normal;
+        }
+    </style>
+</head>
+<body>
+    <div class="breadcrumb">
+        <a href="/">Projects</a> / <a href="/projects/{{.Project.ID}}">{{.Project.Name}}</a> / <strong>Overview</strong>
+    </div>
+
+    <header>
+        <h1>{{.Project.Name}}</h1>
+        <p>
+            <span class="status-{{.Project.Status}}">● {{.Project.Status}}</span>
+            <span class="muted">•</span>
+            Created {{.Project.CreatedAt.Format "Jan 2, 2006"}}
+            {{if .Project.Owner}}
+            <span class="muted">•</span>
+            Owner: {{.Project.Owner.Username}}
+            {{end}}
+        </p>
+    </header>
+
+    <div class="tabs">
+        <a href="/projects/{{.Project.ID}}" class="tab active">Overview</a>
+        <a href="/projects/{{.Project.ID}}/tasks" class="tab">Tasks</a>
+        <a href="/projects/{{.Project.ID}}/epics" class="tab">Epics</a>
+    </div>
+
+    <main>
+        {{if .Project.Description}}
+        <section>
+            <h3>Description</h3>
+            <div class="description-box">
+                {{.Project.Description}}
+            </div>
+        </section>
+        {{end}}
+
+        <section>
+            <h3>Overview</h3>
+            <div class="stats-row">
+                <div class="stat-box">
+                    <div class="stat-label">Total Tasks</div>
+                    <div class="stat-value">{{.Stats.TotalTasks}}</div>
+                    <div style="margin-top: 0.5rem;">
+                        <div style="height: 4px; background: #f0f0f0; border-radius: 2px; overflow: hidden;">
+                            <div style="height: 100%; background: #16a34a; width: {{.Stats.TaskCompletionPercentage}}%;"></div>
+                        </div>
+                        <div class="stat-sub">{{.Stats.TaskCompletionPercentage}}% complete</div>
+                    </div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">In Progress</div>
+                    <div class="stat-value" style="color: #06c;">{{.Stats.InProgressTasks}}</div>
+                    <div class="stat-sub">{{.Stats.InProgressTasksPercentage}}% of total</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Completed</div>
+                    <div class="stat-value" style="color: #16a34a;">{{.Stats.CompletedTasks}}</div>
+                    <div class="stat-sub">{{.Stats.TaskCompletionPercentage}}% of total</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Total Epics</div>
+                    <div class="stat-value">{{.Stats.TotalEpics}}</div>
+                    <div class="stat-sub">{{.Stats.ActiveEpics}} active</div>
+                </div>
+            </div>
+        </section>
+
+        <div class="info-grid">
+            <section>
+                <h3>Task Distribution</h3>
+                <table class="info-table">
+                    <tr>
+                        <th>Status</th>
+                        <th style="text-align: right;">Count</th>
+                        <th style="text-align: right;">Percentage</th>
+                    </tr>
+                    <tr>
+                        <td>To Do</td>
+                        <td style="text-align: right;">{{.Stats.TodoTasks}}</td>
+                        <td style="text-align: right;" class="muted">{{.Stats.TodoTasksPercentage}}%</td>
+                    </tr>
+                    <tr>
+                        <td>In Progress</td>
+                        <td style="text-align: right;" class="status-in_progress">{{.Stats.InProgressTasks}}</td>
+                        <td style="text-align: right;" class="muted">{{.Stats.InProgressTasksPercentage}}%</td>
+                    </tr>
+                    <tr>
+                        <td>Review</td>
+                        <td style="text-align: right;" class="status-review">{{.Stats.ReviewTasks}}</td>
+                        <td style="text-align: right;" class="muted">{{.Stats.ReviewTasksPercentage}}%</td>
+                    </tr>
+                    <tr>
+                        <td>Completed</td>
+                        <td style="text-align: right;" class="status-done">{{.Stats.CompletedTasks}}</td>
+                        <td style="text-align: right;" class="muted">{{.Stats.TaskCompletionPercentage}}%</td>
+                    </tr>
+                </table>
+
+                <h3 style="margin-top: 2rem;">Project Metrics</h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                    <div style="background: #fff; border: 1px solid #e0e0e0; padding: 0.75rem; border-radius: 3px;">
+                        <div style="display: flex; align-items: center; justify-content: space-between;">
+                            <span style="font-size: 11px; color: #666;">HIGH PRIORITY</span>
+                            <span style="font-size: 18px; font-weight: 600; color: #ea580c;">{{.Stats.HighPriorityTasks}}</span>
+                        </div>
+                    </div>
+                    <div style="background: #fff; border: 1px solid #e0e0e0; padding: 0.75rem; border-radius: 3px;">
+                        <div style="display: flex; align-items: center; justify-content: space-between;">
+                            <span style="font-size: 11px; color: #666;">OVERDUE</span>
+                            <span style="font-size: 18px; font-weight: 600; color: #dc2626;">{{.Stats.OverdueTasks}}</span>
+                        </div>
+                    </div>
+                    <div style="background: #fff; border: 1px solid #e0e0e0; padding: 0.75rem; border-radius: 3px;">
+                        <div style="display: flex; align-items: center; justify-content: space-between;">
+                            <span style="font-size: 11px; color: #666;">LABELS</span>
+                            <span style="font-size: 18px; font-weight: 600;">{{.Stats.TotalLabels}}</span>
+                        </div>
+                    </div>
+                    <div style="background: #fff; border: 1px solid #e0e0e0; padding: 0.75rem; border-radius: 3px;">
+                        <div style="display: flex; align-items: center; justify-content: space-between;">
+                            <span style="font-size: 11px; color: #666;">DEPENDENCIES</span>
+                            <span style="font-size: 18px; font-weight: 600;">{{.Stats.TotalDependencies}}</span>
+                        </div>
+                    </div>
+                </div>
+
+                {{if or .Project.StartDate .Project.EndDate}}
+                <h3 style="margin-top: 2rem;">Timeline</h3>
+                <div style="background: #fff; border: 1px solid #e0e0e0; padding: 1rem; border-radius: 3px;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        {{if .Project.StartDate}}
+                        <div>
+                            <div style="font-size: 11px; color: #666; margin-bottom: 0.25rem;">START DATE</div>
+                            <div style="font-weight: 500;">{{.Project.StartDate.Format "Jan 2, 2006"}}</div>
+                        </div>
+                        {{end}}
+                        {{if .Project.EndDate}}
+                        <div>
+                            <div style="font-size: 11px; color: #666; margin-bottom: 0.25rem;">END DATE</div>
+                            <div style="font-weight: 500;">{{.Project.EndDate.Format "Jan 2, 2006"}}</div>
+                        </div>
+                        {{end}}
+                    </div>
+                </div>
+                {{end}}
+            </section>
+
+            <section>
+                <h3>Recent Activity</h3>
+                <div class="content-box">
+                    {{if .RecentTasks}}
+                        {{range .RecentTasks}}
+                        <div class="activity-item">
+                            <div class="activity-title">{{.Title}}</div>
+                            <div class="activity-meta">
+                                <span class="status-{{.Status}}">{{.Status}}</span> •
+                                Updated {{.UpdatedAt.Format "Jan 2, 3:04 PM"}}
+                            </div>
+                        </div>
+                        {{end}}
+                    {{else}}
+                        <p class="muted center">No recent activity</p>
+                    {{end}}
+                </div>
+
+                {{if gt .Stats.TotalEpics 0}}
+                <h3 style="margin-top: 2rem;">Epic Summary</h3>
+                <table class="info-table">
+                    <tr>
+                        <th>Status</th>
+                        <th style="text-align: right;">Count</th>
+                    </tr>
+                    <tr>
+                        <td>Planned</td>
+                        <td style="text-align: right;">{{.Stats.PlannedEpics}}</td>
+                    </tr>
+                    <tr>
+                        <td>Active</td>
+                        <td style="text-align: right;" class="status-in_progress">{{.Stats.ActiveEpics}}</td>
+                    </tr>
+                    <tr>
+                        <td>Completed</td>
+                        <td style="text-align: right;" class="status-done">{{.Stats.CompletedEpics}}</td>
+                    </tr>
+                </table>
+                {{end}}
+            </section>
+        </div>
+    </main>
+</body>
+</html>

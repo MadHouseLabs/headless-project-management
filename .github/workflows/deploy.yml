@@ -64,14 +64,17 @@ jobs:
         DOCKER_TLS_VERIFY: 1
         DOCKER_CERT_PATH: /home/runner/.docker
       run: |
-        # Pull the latest image
-        docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-
-        # Stop and remove existing container
+        # Stop and remove existing container first
         docker stop headless-pm || true
         docker rm headless-pm || true
 
-        # Run new container
+        # Remove the old image to force a fresh download
+        docker rmi ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest || true
+
+        # Pull the latest image (will always download fresh since we removed it)
+        docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+
+        # Run new container with the fresh image
         docker run -d \
           --name headless-pm \
           --restart unless-stopped \
@@ -84,6 +87,10 @@ jobs:
           -e MCP_ENABLED=true \
           -e ADMIN_API_TOKEN=e4Cvk3VipNSzU6vj3liF5nNpg9RBpo3uC3SZDyFegs4= \
           ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+
+        # Verify container is running
+        sleep 5
+        docker ps | grep headless-pm || exit 1
 
         # Clean up old images
         docker image prune -af --filter "until=24h"

@@ -91,10 +91,11 @@ func main() {
 
 	// Web routes
 	router.GET("/", webHandler.ProjectsPage)
-	router.GET("/:projectId", webHandler.ProjectBoardPage)
-	router.GET("/:projectId/epics", webHandler.EpicsPage)
-	router.GET("/:projectId/epics/:epicId", webHandler.EpicDetailPage)
-	router.GET("/:projectId/:taskId", webHandler.TaskDetailPage)
+	router.GET("/projects/:projectId", webHandler.ProjectOverviewPage)
+	router.GET("/projects/:projectId/tasks", webHandler.ProjectBoardPage)
+	router.GET("/projects/:projectId/epics", webHandler.EpicsPage)
+	router.GET("/projects/:projectId/epics/:epicId", webHandler.EpicDetailPage)
+	router.GET("/projects/:projectId/tasks/:taskId", webHandler.TaskDetailPage)
 
 	api.SetupExtendedRouter(router, db, vectorService)
 

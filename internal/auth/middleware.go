@@ -65,18 +65,18 @@ func AuthMiddleware(db *database.Database, requiredScopes ...string) gin.Handler
 			return
 		}
 
-		// Check if token is valid
-		if !apiToken.IsValid() {
+		// Check if token has expired
+		if apiToken.ExpiresAt != nil && apiToken.ExpiresAt.Before(time.Now()) {
 			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": "Token is inactive or expired",
+				"error": "Token is expired",
 			})
 			c.Abort()
 			return
 		}
 
-		// Check required scopes
+		// Check required scopes (simplified - just check if scope field contains required scope)
 		for _, scope := range requiredScopes {
-			if !apiToken.HasScope(scope) {
+			if !strings.Contains(apiToken.Scope, scope) {
 				c.JSON(http.StatusForbidden, gin.H{
 					"error": "Insufficient permissions",
 					"required_scope": scope,
@@ -93,9 +93,9 @@ func AuthMiddleware(db *database.Database, requiredScopes ...string) gin.Handler
 
 		// Set user context
 		c.Set("token_id", apiToken.ID)
-		c.Set("user_id", apiToken.CreatedBy)
-		c.Set("scopes", apiToken.Scopes)
-		c.Set("is_admin", apiToken.HasScope("admin"))
+		c.Set("user_id", apiToken.UserID)
+		c.Set("scopes", apiToken.Scope)
+		c.Set("is_admin", strings.Contains(apiToken.Scope, "admin"))
 
 		c.Next()
 	}
@@ -143,11 +143,11 @@ func OptionalAuth(db *database.Database) gin.HandlerFunc {
 			var apiToken models.APIToken
 			tokenHash := HashToken(token)
 			err := db.Where("token_hash = ?", tokenHash).First(&apiToken).Error
-			if err == nil && apiToken.IsValid() {
+			if err == nil && (apiToken.ExpiresAt == nil || apiToken.ExpiresAt.After(time.Now())) {
 				c.Set("authenticated", true)
 				c.Set("token_id", apiToken.ID)
-				c.Set("user_id", apiToken.CreatedBy)
-				c.Set("scopes", apiToken.Scopes)
+				c.Set("user_id", apiToken.UserID)
+				c.Set("scopes", apiToken.Scope)
 			}
 		}
 

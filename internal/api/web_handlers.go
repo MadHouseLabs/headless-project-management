@@ -1,9 +1,9 @@
 package api
 
 import (
-	"html/template"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/headless-pm/headless-project-management/internal/database"
@@ -11,8 +11,7 @@ import (
 )
 
 type WebHandler struct {
-	db        *database.Database
-	templates *template.Template
+	db *database.Database
 }
 
 type TaskPageData struct {
@@ -29,10 +28,8 @@ type TaskFilters struct {
 }
 
 func NewWebHandler(db *database.Database) *WebHandler {
-	templates := template.Must(template.ParseGlob("templates/*.html"))
 	return &WebHandler{
-		db:        db,
-		templates: templates,
+		db: db,
 	}
 }
 
@@ -91,6 +88,121 @@ func (h *WebHandler) ProjectsPage(c *gin.Context) {
 		"TotalTasks":    totalTasks,
 		"TotalActive":   totalActive,
 		"TotalDone":     totalDone,
+	})
+}
+
+// ProjectOverviewPage shows the project overview with description and statistics
+func (h *WebHandler) ProjectOverviewPage(c *gin.Context) {
+	// Get project ID from URL
+	projectID := c.Param("projectId")
+	id, err := strconv.ParseUint(projectID, 10, 32)
+	if err != nil {
+		c.HTML(http.StatusBadRequest, "error.html", gin.H{
+			"Error": "Invalid project ID",
+		})
+		return
+	}
+
+	// Get project with tasks and epics
+	project, err := h.db.GetProject(uint(id))
+	if err != nil {
+		c.HTML(http.StatusNotFound, "error.html", gin.H{
+			"Error": "Project not found",
+		})
+		return
+	}
+
+	// Calculate statistics
+	type ProjectStats struct {
+		TotalTasks               int
+		CompletedTasks           int
+		TodoTasks                int
+		InProgressTasks          int
+		ReviewTasks              int
+		TaskCompletionPercentage int
+		TodoTasksPercentage      int
+		InProgressTasksPercentage int
+		ReviewTasksPercentage    int
+		TotalEpics               int
+		ActiveEpics              int
+		CompletedEpics           int
+		PlannedEpics             int
+		TotalLabels              int
+		HighPriorityTasks        int
+		OverdueTasks             int
+		TotalDependencies        int
+	}
+
+	stats := ProjectStats{}
+
+	// Task statistics
+	for _, task := range project.Tasks {
+		stats.TotalTasks++
+		switch task.Status {
+		case models.TaskStatusDone:
+			stats.CompletedTasks++
+		case models.TaskStatusTodo:
+			stats.TodoTasks++
+		case models.TaskStatusInProgress:
+			stats.InProgressTasks++
+		case models.TaskStatusReview:
+			stats.ReviewTasks++
+		}
+
+		if task.Priority == models.TaskPriorityHigh || task.Priority == models.TaskPriorityUrgent {
+			stats.HighPriorityTasks++
+		}
+
+		if task.DueDate != nil && task.DueDate.Before(time.Now()) && task.Status != models.TaskStatusDone {
+			stats.OverdueTasks++
+		}
+	}
+
+	if stats.TotalTasks > 0 {
+		stats.TaskCompletionPercentage = (stats.CompletedTasks * 100) / stats.TotalTasks
+		stats.TodoTasksPercentage = (stats.TodoTasks * 100) / stats.TotalTasks
+		stats.InProgressTasksPercentage = (stats.InProgressTasks * 100) / stats.TotalTasks
+		stats.ReviewTasksPercentage = (stats.ReviewTasks * 100) / stats.TotalTasks
+	}
+
+	// Epic statistics
+	for _, epic := range project.Epics {
+		stats.TotalEpics++
+		switch epic.Status {
+		case models.EpicStatusActive:
+			stats.ActiveEpics++
+		case models.EpicStatusCompleted:
+			stats.CompletedEpics++
+		case models.EpicStatusPlanned:
+			stats.PlannedEpics++
+		}
+	}
+
+	// Count labels
+	var labelCount int64
+	h.db.Model(&models.Label{}).Where("project_id = ?", project.ID).Count(&labelCount)
+	stats.TotalLabels = int(labelCount)
+
+	// Count dependencies
+	var depCount int64
+	h.db.Table("task_dependencies").
+		Joins("JOIN tasks ON tasks.id = task_dependencies.task_id").
+		Where("tasks.project_id = ?", project.ID).
+		Count(&depCount)
+	stats.TotalDependencies = int(depCount)
+
+	// Get recent tasks (last 5 updated)
+	var recentTasks []models.Task
+	h.db.Where("project_id = ?", project.ID).
+		Order("updated_at DESC").
+		Limit(5).
+		Find(&recentTasks)
+
+	// Render template
+	c.HTML(http.StatusOK, "project_overview.html", gin.H{
+		"Project":     project,
+		"Stats":       stats,
+		"RecentTasks": recentTasks,
 	})
 }
 
@@ -305,11 +417,24 @@ func (h *WebHandler) EpicsPage(c *gin.Context) {
 		return
 	}
 
-	// Calculate progress for each epic
+	// Calculate progress and counts
+	plannedCount := 0
+	activeCount := 0
+	completedCount := 0
+
 	for i := range epics {
 		if len(epics[i].Tasks) > 0 {
 			progress, _ := h.db.CalculateEpicProgress(epics[i].ID)
 			epics[i].Progress = progress
+		}
+
+		switch epics[i].Status {
+		case models.EpicStatusPlanned:
+			plannedCount++
+		case models.EpicStatusActive:
+			activeCount++
+		case models.EpicStatusCompleted:
+			completedCount++
 		}
 	}
 
@@ -317,6 +442,9 @@ func (h *WebHandler) EpicsPage(c *gin.Context) {
 	c.HTML(http.StatusOK, "epics.html", gin.H{
 		"Project": project,
 		"Epics":   epics,
+		"PlannedCount": plannedCount,
+		"ActiveCount": activeCount,
+		"CompletedCount": completedCount,
 	})
 }
 

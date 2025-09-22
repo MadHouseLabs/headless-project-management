@@ -15,18 +15,12 @@ func SetupExtendedRouter(router *gin.Engine, db *database.Database, vectorServic
 	jwtManager := auth.NewJWTManager("your-secret-key-change-this", 24*time.Hour)
 
 	authHandler := NewAuthHandler(db, jwtManager)
-	teamHandler := NewTeamHandler(db)
-	extendedHandler := NewExtendedHandler(db)
 	epicHandler := NewEpicHandler(db)
-	notificationHandler := NewNotificationHandler(db)
-	activityHandler := NewActivityHandler(db, notificationHandler)
-	webhookHandler := NewWebhookHandler(db)
-	searchHandler := NewSearchHandler(db)
-	analyticsHandler := NewAnalyticsHandler(db)
-	vectorHandler := NewVectorHandler(db, vectorService)
+	extendedHandler := NewExtendedHandler(db)
 
 	api := router.Group("/api")
 	{
+		// Authentication endpoints
 		auth := api.Group("/auth")
 		{
 			auth.POST("/register", authHandler.Register)
@@ -41,29 +35,7 @@ func SetupExtendedRouter(router *gin.Engine, db *database.Database, vectorServic
 			}
 		}
 
-		teams := api.Group("/teams")
-		{
-			teams.POST("", teamHandler.CreateTeam)
-			teams.GET("", teamHandler.ListTeams)
-			teams.GET("/:id", teamHandler.GetTeam)
-			teams.PUT("/:id", teamHandler.UpdateTeam)
-			teams.DELETE("/:id", teamHandler.DeleteTeam)
-			teams.POST("/:id/members", teamHandler.AddMember)
-			teams.DELETE("/:id/members/:userId", teamHandler.RemoveMember)
-		}
-
-		milestones := api.Group("/milestones")
-		{
-			milestones.POST("", extendedHandler.CreateMilestone)
-			milestones.GET("", extendedHandler.ListMilestones)
-		}
-
-		sprints := api.Group("/sprints")
-		{
-			sprints.POST("", extendedHandler.CreateSprint)
-			sprints.GET("", extendedHandler.ListSprints)
-		}
-
+		// Epic endpoints
 		epics := api.Group("/epics")
 		{
 			epics.POST("", epicHandler.CreateEpic)
@@ -77,84 +49,15 @@ func SetupExtendedRouter(router *gin.Engine, db *database.Database, vectorServic
 			epics.GET("/project/:projectId", epicHandler.GetProjectEpics)
 		}
 
-		workflows := api.Group("/workflows")
-		{
-			workflows.POST("", extendedHandler.CreateWorkflow)
-			workflows.GET("/project/:projectId", extendedHandler.GetWorkflow)
-		}
-
-		customFields := api.Group("/custom-fields")
-		{
-			customFields.POST("", extendedHandler.CreateCustomField)
-			customFields.GET("/project/:projectId", extendedHandler.GetCustomFields)
-			customFields.POST("/value", extendedHandler.SetFieldValue)
-		}
-
-		timeEntries := api.Group("/time-entries")
-		{
-			timeEntries.POST("", extendedHandler.LogTimeEntry)
-			timeEntries.GET("", extendedHandler.GetTimeEntries)
-		}
-
+		// Task dependency endpoints
 		taskExtras := api.Group("/tasks")
 		{
 			taskExtras.POST("/:id/dependencies", extendedHandler.AddTaskDependency)
 			taskExtras.GET("/:id/dependencies", extendedHandler.GetTaskDependencies)
-			taskExtras.POST("/:id/watchers", extendedHandler.AddTaskWatcher)
-			taskExtras.DELETE("/:id/watchers", extendedHandler.RemoveTaskWatcher)
 		}
 
-		notifications := api.Group("/notifications")
-		{
-			notifications.GET("", notificationHandler.GetNotifications)
-			notifications.PUT("/:id/read", notificationHandler.MarkAsRead)
-			notifications.PUT("/read-all", notificationHandler.MarkAllAsRead)
-			notifications.GET("/unread-count", notificationHandler.GetUnreadCount)
-			notifications.DELETE("/:id", notificationHandler.DeleteNotification)
-		}
-
-		activities := api.Group("/activities")
-		{
-			activities.GET("", activityHandler.GetActivities)
-			activities.GET("/project/:id", activityHandler.GetProjectActivityFeed)
-			activities.GET("/feed", activityHandler.GetUserActivityFeed)
-		}
-
-		webhooks := api.Group("/webhooks")
-		{
-			webhooks.POST("", webhookHandler.CreateWebhook)
-			webhooks.GET("", webhookHandler.ListWebhooks)
-			webhooks.GET("/:id", webhookHandler.GetWebhook)
-			webhooks.PUT("/:id", webhookHandler.UpdateWebhook)
-			webhooks.DELETE("/:id", webhookHandler.DeleteWebhook)
-			webhooks.POST("/:id/test", webhookHandler.TestWebhook)
-		}
-
-		search := api.Group("/search")
-		{
-			search.GET("", searchHandler.GlobalSearch)
-			search.POST("/tasks", searchHandler.AdvancedTaskSearch)
-
-			savedSearches := search.Group("/saved")
-			{
-				savedSearches.GET("", searchHandler.SavedSearches)
-				savedSearches.POST("", searchHandler.SaveSearch)
-				savedSearches.DELETE("/:id", searchHandler.DeleteSavedSearch)
-			}
-		}
-
-		analytics := api.Group("/analytics")
-		{
-			analytics.GET("/project/:id/stats", analyticsHandler.GetProjectStats)
-			analytics.GET("/user/stats", analyticsHandler.GetUserStats)
-			analytics.GET("/sprint/:sprintId/burndown", analyticsHandler.GetBurndownChart)
-			analytics.GET("/velocity", analyticsHandler.GetVelocityChart)
-			analytics.GET("/task-distribution", analyticsHandler.GetTaskDistribution)
-			analytics.GET("/productivity", analyticsHandler.GetProductivityMetrics)
-		}
-
+		// Label endpoints
 		labels := api.Group("/labels")
-		// No JWT auth required for now
 		{
 			labels.POST("", func(c *gin.Context) {
 				var label models.Label
@@ -237,14 +140,66 @@ func SetupExtendedRouter(router *gin.Engine, db *database.Database, vectorServic
 			})
 		}
 
-		// Vector/AI endpoints
-		vectors := api.Group("/vectors")
+		// Comment endpoints
+		comments := api.Group("/comments")
 		{
-			vectors.GET("/search", vectorHandler.SemanticSearch)
-			vectors.POST("/search/hybrid", vectorHandler.HybridSearch)
-			vectors.GET("/similar/tasks/:id", vectorHandler.FindSimilarTasks)
-			vectors.GET("/recommend/tasks", vectorHandler.RecommendTasks)
-			vectors.GET("/cluster/project/:projectId", vectorHandler.ClusterTasks)
+			comments.POST("", func(c *gin.Context) {
+				var comment models.Comment
+				if err := c.ShouldBindJSON(&comment); err != nil {
+					c.JSON(400, gin.H{"error": err.Error()})
+					return
+				}
+				if err := db.AddComment(&comment); err != nil {
+					c.JSON(500, gin.H{"error": "Failed to add comment"})
+					return
+				}
+				c.JSON(201, comment)
+			})
+			comments.GET("/task/:taskId", func(c *gin.Context) {
+				taskIDStr := c.Param("taskId")
+				taskID, err := strconv.ParseUint(taskIDStr, 10, 32)
+				if err != nil {
+					c.JSON(400, gin.H{"error": "Invalid task ID"})
+					return
+				}
+				var comments []models.Comment
+				if err := db.Where("task_id = ?", taskID).Order("created_at DESC").Find(&comments).Error; err != nil {
+					c.JSON(500, gin.H{"error": "Failed to get comments"})
+					return
+				}
+				c.JSON(200, comments)
+			})
+		}
+
+		// Attachment endpoints
+		attachments := api.Group("/attachments")
+		{
+			attachments.POST("", func(c *gin.Context) {
+				var attachment models.Attachment
+				if err := c.ShouldBindJSON(&attachment); err != nil {
+					c.JSON(400, gin.H{"error": err.Error()})
+					return
+				}
+				if err := db.AddAttachment(&attachment); err != nil {
+					c.JSON(500, gin.H{"error": "Failed to add attachment"})
+					return
+				}
+				c.JSON(201, attachment)
+			})
+			attachments.GET("/task/:taskId", func(c *gin.Context) {
+				taskIDStr := c.Param("taskId")
+				taskID, err := strconv.ParseUint(taskIDStr, 10, 32)
+				if err != nil {
+					c.JSON(400, gin.H{"error": "Invalid task ID"})
+					return
+				}
+				var attachments []models.Attachment
+				if err := db.Where("task_id = ?", taskID).Find(&attachments).Error; err != nil {
+					c.JSON(500, gin.H{"error": "Failed to get attachments"})
+					return
+				}
+				c.JSON(200, attachments)
+			})
 		}
 	}
 }

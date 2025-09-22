@@ -1,7 +1,11 @@
 package api
 
 import (
+	"crypto/rand"
+	"encoding/hex"
+	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -49,20 +53,14 @@ func (h *TokenHandler) CreateAPIToken(c *gin.Context) {
 	}
 
 	// Generate the token
-	token, err := models.GenerateToken()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
-		return
-	}
+	token := generateSecureToken(32)
 
 	// Create token record
 	apiToken := &models.APIToken{
-		Name:        req.Name,
-		Description: req.Description,
-		TokenHash:   auth.HashToken(token),
-		Scopes:      req.Scopes,
-		CreatedBy:   c.GetString("user_id"),
-		IsActive:    true,
+		Name:      req.Name,
+		Token:     auth.HashToken(token),
+		Scope:     req.Scopes,
+		UserID:    c.GetUint("user_id"),
 	}
 
 	// Set expiration if specified
@@ -72,8 +70,8 @@ func (h *TokenHandler) CreateAPIToken(c *gin.Context) {
 	}
 
 	// Default scopes if not specified
-	if apiToken.Scopes == "" {
-		apiToken.Scopes = "read,write"
+	if apiToken.Scope == "" {
+		apiToken.Scope = "read,write"
 	}
 
 	if err := h.db.Create(apiToken).Error; err != nil {
@@ -86,11 +84,11 @@ func (h *TokenHandler) CreateAPIToken(c *gin.Context) {
 		ID:          apiToken.ID,
 		Name:        apiToken.Name,
 		Token:       token, // Return the actual token only on creation
-		Description: apiToken.Description,
-		Scopes:      apiToken.Scopes,
-		CreatedBy:   apiToken.CreatedBy,
+		Description: req.Description,
+		Scopes:      apiToken.Scope,
+		CreatedBy:   fmt.Sprintf("%d", apiToken.UserID),
 		ExpiresAt:   apiToken.ExpiresAt,
-		IsActive:    apiToken.IsActive,
+		IsActive:    apiToken.ExpiresAt == nil || apiToken.ExpiresAt.After(time.Now()),
 		CreatedAt:   apiToken.CreatedAt,
 	})
 }
@@ -109,12 +107,12 @@ func (h *TokenHandler) ListAPITokens(c *gin.Context) {
 		response[i] = APITokenResponse{
 			ID:          token.ID,
 			Name:        token.Name,
-			Description: token.Description,
-			Scopes:      token.Scopes,
-			CreatedBy:   token.CreatedBy,
+			Description: "",
+			Scopes:      token.Scope,
+			CreatedBy:   fmt.Sprintf("%d", token.UserID),
 			ExpiresAt:   token.ExpiresAt,
 			LastUsed:    token.LastUsed,
-			IsActive:    token.IsActive,
+			IsActive:    token.ExpiresAt == nil || token.ExpiresAt.After(time.Now()),
 			CreatedAt:   token.CreatedAt,
 		}
 	}
@@ -132,13 +130,30 @@ func (h *TokenHandler) RevokeAPIToken(c *gin.Context) {
 		return
 	}
 
-	token.IsActive = false
+	// Set expiration to now to revoke
+	now := time.Now()
+	token.ExpiresAt = &now
 	if err := h.db.Save(&token).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to revoke token"})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Token revoked successfully"})
+}
+
+// generateSecureToken generates a cryptographically secure random token
+func generateSecureToken(length int) string {
+	bytes := make([]byte, length)
+	if _, err := rand.Read(bytes); err != nil {
+		// Fallback to timestamp-based token
+		return hex.EncodeToString([]byte(time.Now().String()))[:length*2]
+	}
+	return hex.EncodeToString(bytes)
+}
+
+// contains checks if a string contains a substring
+func contains(s, substr string) bool {
+	return strings.Contains(s, substr)
 }
 
 // ValidateAPIToken validates the current token
@@ -162,11 +177,11 @@ func (h *TokenHandler) ValidateAPIToken(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"valid": token.IsValid(),
+		"valid": token.ExpiresAt == nil || token.ExpiresAt.After(time.Now()),
 		"name": token.Name,
-		"scopes": token.Scopes,
+		"scopes": token.Scope,
 		"expires_at": token.ExpiresAt,
-		"is_admin": token.HasScope("admin"),
+		"is_admin": contains(token.Scope, "admin"),
 	})
 }
 
@@ -183,12 +198,12 @@ func (h *TokenHandler) GetAPIToken(c *gin.Context) {
 	c.JSON(http.StatusOK, APITokenResponse{
 		ID:          token.ID,
 		Name:        token.Name,
-		Description: token.Description,
-		Scopes:      token.Scopes,
-		CreatedBy:   token.CreatedBy,
+		Description: "",
+		Scopes:      token.Scope,
+		CreatedBy:   fmt.Sprintf("%d", token.UserID),
 		ExpiresAt:   token.ExpiresAt,
 		LastUsed:    token.LastUsed,
-		IsActive:    token.IsActive,
+		IsActive:    token.ExpiresAt == nil || token.ExpiresAt.After(time.Now()),
 		CreatedAt:   token.CreatedAt,
 	})
 }

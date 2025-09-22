@@ -3,68 +3,135 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Projects</title>
-    <link rel="stylesheet" href="/static/css/style.iVD6YFX6.css">
+    <title>Projects - Headless PM</title>
+    <link rel="stylesheet" href="/static/css/style.DoC8pV50.css">
+    <style>
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        .stat-card {
+            background: #fff;
+            border: 1px solid #e0e0e0;
+            padding: 1rem;
+            border-radius: 3px;
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: 600;
+            margin: 0.5rem 0;
+        }
+        .stat-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #666;
+        }
+        .progress-bar {
+            height: 4px;
+            background: #f0f0f0;
+            border-radius: 2px;
+            overflow: hidden;
+            margin-top: 0.25rem;
+        }
+        .progress-fill {
+            height: 100%;
+            background: #06c;
+            transition: width 0.3s ease;
+        }
+        .actions-cell a {
+            margin: 0 0.25rem;
+        }
+    </style>
 </head>
 <body>
-    <nav>
-        <span class="muted">Projects</span>
-    </nav>
+    <header>
+        <h1>Projects</h1>
+        <p class="muted">Headless Project Management System</p>
+    </header>
 
-    <h1>Project Management System</h1>
-    <hr>
+    <main>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Total Projects</div>
+                <div class="stat-value">{{.TotalProjects}}</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Total Tasks</div>
+                <div class="stat-value">{{.TotalTasks}}</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Active Tasks</div>
+                <div class="stat-value" style="color: #06c;">{{.TotalActive}}</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Completed Tasks</div>
+                <div class="stat-value" style="color: #16a34a;">{{.TotalDone}}</div>
+            </div>
+        </div>
 
-    <h2>Projects</h2>
-    {{if .Projects}}
-    <table>
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Name</th>
-                <th>Tasks</th>
-                <th>Active</th>
-                <th>Done</th>
-                <th>Progress</th>
-            </tr>
-        </thead>
-        <tbody>
-            {{range .Projects}}
-            <tr>
-                <td>#{{.ID}}</td>
-                <td><a href="/{{.ID}}">{{.Name}}</a></td>
-                <td>{{.TaskCount}}</td>
-                <td>{{.ActiveCount}}</td>
-                <td>{{.DoneCount}}</td>
-                <td>{{.Progress}}%</td>
-            </tr>
-            {{end}}
-        </tbody>
-    </table>
-    {{else}}
-    <p>No projects found. Create a project using the API.</p>
-    {{end}}
-
-    {{if .Projects}}
-    <hr>
-    <h3>Statistics</h3>
-    <table>
-        <tr>
-            <th>Total Projects</th>
-            <td>{{.TotalProjects}}</td>
-        </tr>
-        <tr>
-            <th>Total Tasks</th>
-            <td>{{.TotalTasks}}</td>
-        </tr>
-        <tr>
-            <th>In Progress</th>
-            <td>{{.TotalActive}}</td>
-        </tr>
-        <tr>
-            <th>Completed</th>
-            <td>{{.TotalDone}}</td>
-        </tr>
-    </table>
-    {{end}}
+        {{if .Projects}}
+        <section>
+            <h2>Projects</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 60px;">ID</th>
+                        <th>Project</th>
+                        <th style="width: 120px;">Status</th>
+                        <th style="width: 150px;">Progress</th>
+                        <th style="width: 120px;">Tasks</th>
+                        <th style="width: 180px;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{range .Projects}}
+                    <tr>
+                        <td class="muted">#{{.ID}}</td>
+                        <td>
+                            <div>
+                                <strong><a href="/projects/{{.ID}}">{{.Name}}</a></strong>
+                                {{if .Description}}
+                                <div class="small muted" style="margin-top: 0.25rem;">{{.Description}}</div>
+                                {{end}}
+                            </div>
+                        </td>
+                        <td>
+                            <span class="status-{{.Status}}">● {{.Status}}</span>
+                        </td>
+                        <td>
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <div style="flex: 1;">
+                                    <div class="progress-bar">
+                                        <div class="progress-fill" style="width: {{.Progress}}%;"></div>
+                                    </div>
+                                </div>
+                                <span class="small">{{.Progress}}%</span>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="small">
+                                <div>{{.TaskCount}} total</div>
+                                <div class="muted">{{.ActiveCount}} active</div>
+                            </div>
+                        </td>
+                        <td class="actions-cell">
+                            <a href="/projects/{{.ID}}">Overview</a>
+                            <a href="/projects/{{.ID}}/tasks">Tasks</a>
+                            <a href="/projects/{{.ID}}/epics">Epics</a>
+                        </td>
+                    </tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </section>
+        {{else}}
+        <section class="content-box">
+            <p class="center muted">No projects found. Create a project using the API.</p>
+        </section>
+        {{end}}
+    </main>
 </body>
 </html>

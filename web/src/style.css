@@ -1,6 +1,10 @@
 /* Ultra-minimal CSS with better typography */
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
+html {
+  overflow-y: scroll; /* Always show vertical scrollbar */
+}
+
 body {
   font: 14px/1.6 -apple-system, BlinkMacSystemFont, 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
   color: #1a1a1a;
@@ -8,6 +12,31 @@ body {
   max-width: 1200px;
   margin: 0 auto;
   padding: 2em;
+}
+
+/* Custom scrollbar styling */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #ddd;
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #bbb;
+}
+
+/* Firefox scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #ddd transparent;
 }
 
 /* Typography hierarchy */
@@ -110,6 +139,7 @@ tr:hover td {
 
 /* Kanban board */
 .kanban {
+  width: 100%;
   table-layout: fixed;
   border: 1px solid #e0e0e0;
 }

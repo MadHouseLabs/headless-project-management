@@ -44,7 +44,6 @@ type ProjectInput struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
 	OwnerID     uint   `json:"owner_id"`
-	TeamID      uint   `json:"team_id"`
 }
 
 type TaskInput struct {
@@ -53,21 +52,9 @@ type TaskInput struct {
 	Description string   `json:"description"`
 	Priority    string   `json:"priority"`
 	AssigneeID  uint     `json:"assignee_id"`
-	MilestoneID uint     `json:"milestone_id"`
-	SprintID    uint     `json:"sprint_id"`
+	EpicID      uint     `json:"epic_id"`
 	DueDate     string   `json:"due_date"`
 	Labels      []string `json:"labels"`
-}
-
-type TeamInput struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
-}
-
-type SearchInput struct {
-	Query      string `json:"query"`
-	EntityType string `json:"entity_type"`
-	Limit      int    `json:"limit"`
 }
 
 // Helper function to create a success response

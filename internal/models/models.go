@@ -78,6 +78,7 @@ type Project struct {
 	UpdatedAt   time.Time     `json:"updated_at"`
 	DeletedAt   *time.Time    `json:"deleted_at" gorm:"index"`
 	Tasks       []Task        `json:"tasks,omitempty" gorm:"foreignKey:ProjectID"`
+	Epics       []Epic        `json:"epics,omitempty" gorm:"foreignKey:ProjectID"`
 	Owner       *User         `json:"owner,omitempty" gorm:"foreignKey:OwnerID"`
 	// Team removed - simplified model
 	Members     []User        `json:"members,omitempty" gorm:"many2many:project_members;"`
