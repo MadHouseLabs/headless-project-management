@@ -42,7 +42,7 @@ COPY --from=builder /app/templates ./templates
 COPY --from=builder /app/web/dist ./web/dist
 
 # Create data directories
-RUN mkdir -p data/db data/uploads
+RUN mkdir -p /data/db /data/uploads
 
 # Expose port
 EXPOSE 8080
