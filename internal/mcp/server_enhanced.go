@@ -66,78 +66,35 @@ func (s *EnhancedMCPServer) ExecuteTool(ctx context.Context, call ToolCall) (*To
 // getToolHandlers returns a map of tool names to their handler functions
 func (s *EnhancedMCPServer) getToolHandlers() map[string]func([]byte) (*ToolResponse, error) {
 	return map[string]func([]byte) (*ToolResponse, error){
-		// Project Management
-		"create_project":     s.createProject,
-		"list_projects":      s.listProjects,
-		"update_project":     s.updateProject,
-		"get_project_stats":  s.getProjectStats,
+		// Project Management (CRUD)
+		"create_project":  s.createProject,
+		"get_project":     s.getProject,
+		"update_project":  s.updateProject,
+		"delete_project":  s.deleteProject,
+		"list_projects":   s.listProjects,
 
-		// Task Management
-		"create_task":         s.createTask,
-		"update_task":         s.updateTask,
-		"list_tasks":          s.listTasks,
-		"add_task_dependency": s.addTaskDependency,
-		"search_tasks":        s.searchTasks,
+		// Task Management (CRUD)
+		"create_task":     s.createTask,
+		"get_task":        s.getTask,
+		"update_task":     s.updateTask,
+		"delete_task":     s.deleteTask,
+		"list_tasks":      s.listTasks,
 
-		// Team Management
-		"create_team":       s.createTeam,
-		"add_team_member":   s.addTeamMember,
-		"list_teams":        s.listTeams,
-		"get_team_velocity": s.getTeamVelocity,
-
-		// Milestone Management
-		"create_milestone": s.createMilestone,
-		"update_milestone": s.updateMilestone,
-		"list_milestones":  s.listMilestones,
-
-		// Sprint Management
-		"create_sprint":   s.createSprint,
-		"start_sprint":    s.startSprint,
-		"complete_sprint": s.completeSprint,
-		"list_sprints":    s.listSprints,
-
-		// Workflow Management
-		"create_workflow":     s.createWorkflow,
-		"add_workflow_state":  s.addWorkflowState,
-
-		// Comments and Collaboration
-		"add_comment":    s.addComment,
-		"list_comments":  s.listComments,
-
-		// Time Tracking
-		"log_time":          s.logTime,
-		"get_time_entries":  s.getTimeEntries,
-
-		// Notifications
-		"create_notification":     s.createNotification,
-		"list_notifications":      s.listNotifications,
-		"mark_notification_read":  s.markNotificationRead,
-
-		// Webhooks
-		"create_webhook": s.createWebhook,
-		"list_webhooks":  s.listWebhooks,
-
-		// AI and Search
-		"semantic_search":              s.semanticSearch,
-		"hybrid_search":                s.hybridSearch,
-		"find_similar_tasks":           s.findSimilarTasks,
-		"recommend_tasks":              s.recommendTasks,
-		"cluster_project_tasks":        s.clusterProjectTasks,
-		"search_projects":              s.searchProjects,
-		"search_documents":             s.searchDocuments,
-		"intelligent_task_assignment":  s.intelligentTaskAssignment,
-
-		// Analytics
-		"get_burndown_chart": s.getBurndownChart,
-		"get_activity_feed":  s.getActivityFeed,
+		// Epic Management (CRUD)
+		"create_epic":     s.createEpic,
+		"get_epic":        s.getEpic,
+		"update_epic":     s.updateEpic,
+		"delete_epic":     s.deleteEpic,
+		"list_epics":      s.listEpics,
 
 		// Labels
-		"create_label": s.createLabel,
-		"assign_label": s.assignLabel,
+		"create_label":    s.createLabel,
+		"assign_label":    s.assignLabel,
+		"list_labels":     s.listLabels,
 
-		// Custom Fields
-		"create_custom_field":     s.createCustomField,
-		"set_custom_field_value":  s.setCustomFieldValue,
+		// Assignees
+		"assign_task":     s.assignTask,
+		"list_assignees":  s.listAssignees,
 	}
 }
 
