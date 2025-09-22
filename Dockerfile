@@ -4,7 +4,7 @@ FROM golang:1.23-alpine AS builder
 WORKDIR /app
 
 # Install build dependencies
-RUN apk add --no-cache gcc musl-dev sqlite-dev
+RUN apk add --no-cache gcc g++ musl-dev sqlite-dev
 
 # Copy go mod files
 COPY go.mod go.sum ./
@@ -13,8 +13,8 @@ RUN go mod download
 # Copy source code
 COPY . .
 
-# Build the application
-RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo -o server cmd/server/main.go
+# Build the application with proper tags for sqlite-vec
+RUN CGO_ENABLED=1 GOOS=linux go build -tags "sqlite_vec" -a -installsuffix cgo -o server cmd/server/main.go
 
 # Final stage
 FROM alpine:latest
