@@ -25,19 +25,19 @@ func InitializeVectorExtension(db *sql.DB) error {
 		// Create virtual table for project embeddings
 		`CREATE VIRTUAL TABLE IF NOT EXISTS project_vectors USING vec0(
 			project_id INTEGER PRIMARY KEY,
-			embedding FLOAT[384]
+			embedding FLOAT[1536]
 		)`,
 
 		// Create virtual table for task embeddings
 		`CREATE VIRTUAL TABLE IF NOT EXISTS task_vectors USING vec0(
 			task_id INTEGER PRIMARY KEY,
-			embedding FLOAT[384]
+			embedding FLOAT[1536]
 		)`,
 
 		// Create virtual table for document embeddings
 		`CREATE VIRTUAL TABLE IF NOT EXISTS document_vectors USING vec0(
 			document_id INTEGER PRIMARY KEY,
-			embedding FLOAT[384]
+			embedding FLOAT[1536]
 		)`,
 
 		// Create index for faster similarity searches
