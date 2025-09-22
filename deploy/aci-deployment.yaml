@@ -1,0 +1,51 @@
+apiVersion: 2021-10-01
+location: centralindia
+name: headless-pm-aci
+properties:
+  containers:
+  - name: headless-pm
+    properties:
+      image: ghcr.io/madhouselabs/headless-project-management:latest
+      ports:
+      - port: 8080
+        protocol: TCP
+      resources:
+        requests:
+          cpu: 1.0
+          memoryInGb: 2.0
+      environmentVariables:
+      - name: SERVER_HOST
+        value: "0.0.0.0"
+      - name: SERVER_PORT
+        value: "8080"
+      - name: DATABASE_DIR
+        value: "/data/db"
+      - name: UPLOAD_DIR
+        value: "/data/uploads"
+      - name: MCP_ENABLED
+        value: "true"
+      - name: ADMIN_API_TOKEN
+        secureValue: "ADMIN_TOKEN_PLACEHOLDER"
+      - name: AZURE_OPENAI_ENDPOINT
+        value: "https://klhub-resource.openai.azure.com/"
+      - name: AZURE_OPENAI_API_KEY
+        secureValue: "AZURE_OPENAI_KEY_PLACEHOLDER"
+      - name: AZURE_OPENAI_EMBEDDING_DEPLOYMENT
+        value: "embeds"
+      volumeMounts:
+      - name: filesharevolume
+        mountPath: /data
+  osType: Linux
+  ipAddress:
+    type: Public
+    ports:
+    - port: 8080
+      protocol: TCP
+  volumes:
+  - name: filesharevolume
+    azureFile:
+      shareName: headlesspmdata
+      storageAccountName: headlesspmstore
+      storageAccountKey: STORAGE_KEY_PLACEHOLDER
+tags: {}
+type: Microsoft.ContainerInstance/containerGroups

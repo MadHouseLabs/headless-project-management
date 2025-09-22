@@ -41,11 +41,12 @@ COPY --from=builder /app/server .
 COPY --from=builder /app/templates ./templates
 COPY --from=builder /app/web/dist ./web/dist
 
-# Create data directories
-RUN mkdir -p /data/db /data/uploads
+# Copy entrypoint script
+COPY docker-entrypoint.sh /app/docker-entrypoint.sh
+RUN chmod +x /app/docker-entrypoint.sh
 
 # Expose port
 EXPOSE 8080
 
 # Run the server
-CMD ["./server"]
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
