@@ -65,7 +65,7 @@ jobs:
         if: github.event_name != 'pull_request'
         uses: anchore/sbom-action@v0
         with:
-          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}
+          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
           format: cyclonedx-json
           output-file: sbom.cyclonedx.json
 
