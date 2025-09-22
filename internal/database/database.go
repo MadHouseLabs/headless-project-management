@@ -50,6 +50,7 @@ func NewDatabase(dataDir string) (*Database, error) {
 		&models.ProjectEmbedding{},
 		&models.TaskEmbedding{},
 		&models.DocumentEmbedding{},
+		&models.APIToken{},
 	); err != nil {
 		return nil, fmt.Errorf("failed to migrate database: %w", err)
 	}
@@ -164,4 +165,85 @@ func (db *Database) AssignLabelToTask(taskID uint, labelID uint) error {
 	}
 
 	return db.Model(&task).Association("Labels").Append(&label)
+}
+
+func (db *Database) GetLabelByID(id string, label *models.Label) error {
+	return db.First(label, id).Error
+}
+
+func (db *Database) UpdateLabel(label *models.Label) error {
+	return db.Save(label).Error
+}
+
+func (db *Database) DeleteLabel(id string) error {
+	return db.Delete(&models.Label{}, id).Error
+}
+
+func (db *Database) GetOrCreateLabel(projectID uint, name string, color string) (*models.Label, error) {
+	var label models.Label
+	err := db.Where("project_id = ? AND name = ?", projectID, name).First(&label).Error
+	if err != nil {
+		// Create label if it doesn't exist
+		if color == "" {
+			// Generate a dark color if not provided
+			colors := []string{
+				"#DC2626", "#059669", "#2563EB", "#7C3AED",
+				"#EA580C", "#0891B2", "#4F46E5", "#BE123C",
+				"#15803D", "#B91C1C", "#0E7490", "#6B21A8",
+				"#C2410C", "#1E40AF", "#86198F", "#166534",
+			}
+			hash := 0
+			for _, c := range name {
+				hash = hash*31 + int(c)
+			}
+			color = colors[hash%len(colors)]
+		}
+
+		label = models.Label{
+			ProjectID: projectID,
+			Name:      name,
+			Color:     color,
+		}
+		if err := db.Create(&label).Error; err != nil {
+			return nil, err
+		}
+	}
+	return &label, nil
+}
+
+func (db *Database) GetLabelsByProject(projectID uint) ([]models.Label, error) {
+	var labels []models.Label
+	err := db.Where("project_id = ?", projectID).Find(&labels).Error
+	return labels, err
+}
+
+func (db *Database) AssignLabelsToTask(taskID uint, projectID uint, labelNames []string) error {
+	// First, get the task
+	var task models.Task
+	if err := db.First(&task, taskID).Error; err != nil {
+		return err
+	}
+
+	// Clear existing labels
+	if err := db.Model(&task).Association("Labels").Clear(); err != nil {
+		return err
+	}
+
+	// Assign new labels
+	for _, labelName := range labelNames {
+		if labelName == "" {
+			continue
+		}
+
+		label, err := db.GetOrCreateLabel(projectID, labelName, "")
+		if err != nil {
+			continue
+		}
+
+		if err := db.Model(&task).Association("Labels").Append(label); err != nil {
+			continue
+		}
+	}
+
+	return nil
 }

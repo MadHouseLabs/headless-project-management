@@ -291,11 +291,13 @@ func (s *EnhancedMCPServer) assignLabelsToTask(taskID, projectID uint, labelName
 	return nil
 }
 
-// Helper to generate a consistent color for a label based on its name
+// Helper to generate a consistent dark color for a label based on its name
 func generateLabelColor(name string) string {
 	colors := []string{
-		"#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4",
-		"#FECA57", "#DDA0DD", "#98D8C8", "#F7DC6F",
+		"#DC2626", "#059669", "#2563EB", "#7C3AED",
+		"#EA580C", "#0891B2", "#4F46E5", "#BE123C",
+		"#15803D", "#B91C1C", "#0E7490", "#6B21A8",
+		"#C2410C", "#1E40AF", "#86198F", "#166534",
 	}
 
 	hash := 0

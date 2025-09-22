@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Project.Name}}</title>
+    <link rel="stylesheet" href="/static/css/style.iVD6YFX6.css">
+</head>
+<body>
+    <nav>
+        <a href="/">← Back to Projects</a>
+    </nav>
+
+    <h1>{{.Project.Name}}</h1>
+
+    {{if or .Labels .Assignees}}
+    <div class="filters">
+        <form method="get" action="/{{.Project.ID}}">
+            {{if .Labels}}
+            <div class="filter-group">
+                <label class="filter-title">Labels:</label>
+                {{range $label := .Labels}}
+                <label class="filter-label">
+                    <input type="checkbox" name="labels" value="{{$label.ID}}"
+                        {{range $.SelectedLabels}}{{if eq . (printf "%d" $label.ID)}}checked{{end}}{{end}}>
+                    <span style="color: {{$label.Color}}">{{$label.Name}}</span>
+                </label>
+                {{end}}
+            </div>
+            {{end}}
+
+            {{if .Assignees}}
+            <div class="filter-group">
+                <label class="filter-title">Assignees:</label>
+                {{range $assignee := .Assignees}}
+                <label class="filter-label">
+                    <input type="checkbox" name="assignees" value="{{$assignee}}"
+                        {{range $.SelectedAssignees}}{{if eq . $assignee}}checked{{end}}{{end}}>
+                    <span>{{$assignee}}</span>
+                </label>
+                {{end}}
+            </div>
+            {{end}}
+
+            <div class="filter-actions">
+                <button type="submit">Apply Filters</button>
+                <a href="/{{.Project.ID}}" class="reset-filters">Clear All</a>
+            </div>
+        </form>
+    </div>
+    {{end}}
+
+    <hr>
+
+    <table class="kanban">
+        <thead>
+            <tr>
+                <th>To Do ({{len (index .TasksByStatus "todo")}})</th>
+                <th>In Progress ({{len (index .TasksByStatus "in_progress")}})</th>
+                <th>In Review ({{len (index .TasksByStatus "review")}})</th>
+                <th>Done ({{len (index .TasksByStatus "done")}})</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>
+                    {{range (index .TasksByStatus "todo")}}
+                    <a href="/{{$.Project.ID}}/{{.ID}}" class="task {{if eq .Priority "urgent"}}priority-u{{else if eq .Priority "high"}}priority-h{{else if eq .Priority "medium"}}priority-m{{else if eq .Priority "low"}}priority-l{{end}}">
+                        <div class="task-header">
+                            <span class="task-id">#{{.ID}}</span>
+                            {{if .DueDate}}<span class="task-due">{{.DueDate.Format "Jan 2"}}</span>{{end}}
+                        </div>
+                        <div class="task-title">{{.Title}}</div>
+                        {{if .Labels}}
+                        <div class="task-labels">
+                            {{range .Labels}}
+                            <span class="task-label" style="color: {{.Color}}">{{.Name}}</span>
+                            {{end}}
+                        </div>
+                        {{end}}
+                        <div class="task-footer">
+                            {{if .Assignee}}<span class="task-assignee">{{.Assignee}}</span>{{end}}
+                            {{if .EstimatedHours}}<span class="task-hours">{{.EstimatedHours}}h</span>{{end}}
+                        </div>
+                    </a>
+                    {{end}}
+                </td>
+                <td>
+                    {{range (index .TasksByStatus "in_progress")}}
+                    <a href="/{{$.Project.ID}}/{{.ID}}" class="task {{if eq .Priority "urgent"}}priority-u{{else if eq .Priority "high"}}priority-h{{else if eq .Priority "medium"}}priority-m{{else if eq .Priority "low"}}priority-l{{end}}">
+                        <div class="task-header">
+                            <span class="task-id">#{{.ID}}</span>
+                            {{if .DueDate}}<span class="task-due">{{.DueDate.Format "Jan 2"}}</span>{{end}}
+                        </div>
+                        <div class="task-title">{{.Title}}</div>
+                        {{if .Labels}}
+                        <div class="task-labels">
+                            {{range .Labels}}
+                            <span class="task-label" style="color: {{.Color}}">{{.Name}}</span>
+                            {{end}}
+                        </div>
+                        {{end}}
+                        <div class="task-footer">
+                            {{if .Assignee}}<span class="task-assignee">{{.Assignee}}</span>{{end}}
+                            {{if .EstimatedHours}}<span class="task-hours">{{.EstimatedHours}}h</span>{{end}}
+                        </div>
+                    </a>
+                    {{end}}
+                </td>
+                <td>
+                    {{range (index .TasksByStatus "review")}}
+                    <a href="/{{$.Project.ID}}/{{.ID}}" class="task {{if eq .Priority "urgent"}}priority-u{{else if eq .Priority "high"}}priority-h{{else if eq .Priority "medium"}}priority-m{{else if eq .Priority "low"}}priority-l{{end}}">
+                        <div class="task-header">
+                            <span class="task-id">#{{.ID}}</span>
+                            {{if .DueDate}}<span class="task-due">{{.DueDate.Format "Jan 2"}}</span>{{end}}
+                        </div>
+                        <div class="task-title">{{.Title}}</div>
+                        {{if .Labels}}
+                        <div class="task-labels">
+                            {{range .Labels}}
+                            <span class="task-label" style="color: {{.Color}}">{{.Name}}</span>
+                            {{end}}
+                        </div>
+                        {{end}}
+                        <div class="task-footer">
+                            {{if .Assignee}}<span class="task-assignee">{{.Assignee}}</span>{{end}}
+                            {{if .EstimatedHours}}<span class="task-hours">{{.EstimatedHours}}h</span>{{end}}
+                        </div>
+                    </a>
+                    {{end}}
+                </td>
+                <td>
+                    {{range (index .TasksByStatus "done")}}
+                    <a href="/{{$.Project.ID}}/{{.ID}}" class="task done">
+                        <div class="task-header">
+                            <span class="task-id">#{{.ID}}</span>
+                            {{if .CompletedAt}}<span class="task-completed">{{.CompletedAt.Format "Jan 2"}}</span>{{end}}
+                        </div>
+                        <div class="task-title">{{.Title}}</div>
+                        {{if .Labels}}
+                        <div class="task-labels">
+                            {{range .Labels}}
+                            <span class="task-label" style="color: {{.Color}}">{{.Name}}</span>
+                            {{end}}
+                        </div>
+                        {{end}}
+                        <div class="task-footer">
+                            {{if .Assignee}}<span class="task-assignee">{{.Assignee}}</span>{{end}}
+                            {{if .ActualHours}}<span class="task-hours">{{.ActualHours}}h</span>{{else if .EstimatedHours}}<span class="task-hours">{{.EstimatedHours}}h</span>{{end}}
+                        </div>
+                    </a>
+                    {{end}}
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</body>
+</html>

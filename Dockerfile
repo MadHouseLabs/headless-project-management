@@ -26,8 +26,12 @@ WORKDIR /app
 # Copy binary from builder
 COPY --from=builder /app/server .
 
-# Copy default config
-COPY --from=builder /app/config.example.json ./config.json
+# Copy templates and static files
+COPY --from=builder /app/templates ./templates
+COPY --from=builder /app/web/dist ./web/dist
+
+# Copy default config if exists
+COPY --from=builder /app/config.example.json ./config.json 2>/dev/null || true
 
 # Create data directories
 RUN mkdir -p data/db data/uploads

@@ -1,0 +1,45 @@
+# Git files
+.git
+.gitignore
+
+# GitHub
+.github/
+
+# Development files
+*.md
+*.log
+.env
+.env.local
+
+# Build artifacts
+/server
+/main
+*.exe
+
+# Data directories (will be created in container)
+data/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test files
+*_test.go
+*.test
+
+# Temporary files
+tmp/
+temp/
+
+# Node modules (if any frontend build)
+node_modules/
+
+# Go workspace
+go.work
+go.work.sum

@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Projects</title>
+    <link rel="stylesheet" href="/static/css/style.iVD6YFX6.css">
+</head>
+<body>
+    <h1>Project Management System</h1>
+    <hr>
+
+    <h2>Projects</h2>
+    {{if .Projects}}
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Tasks</th>
+                <th>Active</th>
+                <th>Done</th>
+                <th>Progress</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{range .Projects}}
+            <tr>
+                <td>#{{.ID}}</td>
+                <td><a href="/{{.ID}}">{{.Name}}</a></td>
+                <td>{{.TaskCount}}</td>
+                <td>{{.ActiveCount}}</td>
+                <td>{{.DoneCount}}</td>
+                <td>{{.Progress}}%</td>
+            </tr>
+            {{end}}
+        </tbody>
+    </table>
+    {{else}}
+    <p>No projects found. Create a project using the API.</p>
+    {{end}}
+
+    {{if .Projects}}
+    <hr>
+    <h3>Statistics</h3>
+    <table>
+        <tr>
+            <th>Total Projects</th>
+            <td>{{.TotalProjects}}</td>
+        </tr>
+        <tr>
+            <th>Total Tasks</th>
+            <td>{{.TotalTasks}}</td>
+        </tr>
+        <tr>
+            <th>In Progress</th>
+            <td>{{.TotalActive}}</td>
+        </tr>
+        <tr>
+            <th>Completed</th>
+            <td>{{.TotalDone}}</td>
+        </tr>
+    </table>
+    {{end}}
+</body>
+</html>

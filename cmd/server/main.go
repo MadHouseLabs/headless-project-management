@@ -1,13 +1,16 @@
 package main
 
 import (
+	"time"
 	"flag"
 	"fmt"
 	"log"
+	"os"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/headless-pm/headless-project-management/internal/api"
+	"github.com/headless-pm/headless-project-management/internal/auth"
 	"github.com/headless-pm/headless-project-management/internal/database"
 	"github.com/headless-pm/headless-project-management/internal/mcp"
 	"github.com/headless-pm/headless-project-management/internal/service"
@@ -64,23 +67,86 @@ func main() {
 	router := gin.Default()
 	router.Use(cors.Default())
 
+	// Load HTML templates
+	router.LoadHTMLGlob("templates/*")
+
+	// Check for admin token
+	adminToken := os.Getenv("ADMIN_API_TOKEN")
+	if adminToken == "" {
+		log.Println("WARNING: ADMIN_API_TOKEN not set. Generating a temporary admin token...")
+		adminToken = "admin-" + fmt.Sprintf("%d", time.Now().Unix())
+		log.Printf("Temporary admin token: %s", adminToken)
+		log.Println("Please set ADMIN_API_TOKEN environment variable for production use.")
+	}
+
 	apiHandler := api.NewHandler(db, fileStorage)
+	webHandler := api.NewWebHandler(db)
+	tokenHandler := api.NewTokenHandler(db)
 	// Use enhanced MCP server with all features
 	mcpServer := mcp.NewEnhancedMCPServer(db, embeddingProvider, embeddingWorker)
 
+	// Serve static files (CSS)
+	router.Static("/static", "./web/dist")
+
+	// Web routes
+	router.GET("/", webHandler.ProjectsPage)
+	router.GET("/:projectId", webHandler.ProjectBoardPage)
+	router.GET("/:projectId/:taskId", webHandler.TaskDetailPage)
+
 	api.SetupExtendedRouter(router, db, vectorService)
 
-	apiGroup := router.Group("/api")
+	// Public auth endpoints (no authentication required)
+	authGroup := router.Group("/auth")
 	{
+		// Validate endpoint can be used to check if a token is valid
+		authGroup.GET("/validate", auth.AuthMiddleware(db), tokenHandler.ValidateAPIToken)
+	}
+
+	// Admin endpoints for token management (requires admin token)
+	adminGroup := router.Group("/admin")
+	adminGroup.Use(auth.AuthMiddleware(db), auth.AdminOnly())
+	{
+		tokens := adminGroup.Group("/tokens")
+		{
+			tokens.POST("", tokenHandler.CreateAPIToken)
+			tokens.GET("", tokenHandler.ListAPITokens)
+			tokens.GET("/:id", tokenHandler.GetAPIToken)
+			tokens.DELETE("/:id", tokenHandler.RevokeAPIToken)
+		}
+	}
+
+	// API endpoints (require authentication)
+	apiGroup := router.Group("/api")
+	apiGroup.Use(auth.AuthMiddleware(db))
+	{
+		// Root-level project endpoints
 		projects := apiGroup.Group("/projects")
 		{
-			projects.POST("", apiHandler.CreateProject)
 			projects.GET("", apiHandler.ListProjects)
-			projects.GET("/:id", apiHandler.GetProject)
-			projects.PUT("/:id", apiHandler.UpdateProject)
-			projects.DELETE("/:id", apiHandler.DeleteProject)
+			projects.POST("", apiHandler.CreateProject)
+
+			// Project-specific endpoints (by ID or name)
+			projectScope := projects.Group("/:project")
+			{
+				projectScope.GET("", apiHandler.GetProject)
+				projectScope.PUT("", apiHandler.UpdateProject)
+				projectScope.DELETE("", apiHandler.DeleteProject)
+
+				// Project tasks
+				projectScope.GET("/tasks", apiHandler.ListProjectTasks)
+				projectScope.POST("/tasks", apiHandler.CreateProjectTask)
+				projectScope.GET("/tasks/:task_id", apiHandler.GetProjectTask)
+				projectScope.PUT("/tasks/:task_id", apiHandler.UpdateProjectTask)
+
+				// Project labels
+				projectScope.GET("/labels", apiHandler.ListProjectLabels)
+
+				// Project users
+				projectScope.GET("/users", apiHandler.ListProjectUsers)
+			}
 		}
 
+		// Legacy task endpoints (kept for backward compatibility)
 		tasks := apiGroup.Group("/tasks")
 		{
 			tasks.POST("", apiHandler.CreateTask)
@@ -91,11 +157,11 @@ func main() {
 			tasks.POST("/:id/comments", apiHandler.AddComment)
 			tasks.POST("/:id/attachments", apiHandler.UploadAttachment)
 		}
-
 	}
 
-	// Register MCP routes at /mcp
+	// Register MCP routes at /mcp (require authentication)
 	mcpGroup := router.Group("/mcp")
+	mcpGroup.Use(auth.AuthMiddleware(db))
 	mcpServer.RegisterRoutes(mcpGroup)
 
 	router.GET("/health", func(c *gin.Context) {
@@ -108,7 +174,7 @@ func main() {
 		})
 	})
 
-	router.GET("/", func(c *gin.Context) {
+	router.GET("/info", func(c *gin.Context) {
 		c.JSON(200, gin.H{
 			"name":    "Headless Project Management System",
 			"version": "1.0.0",
@@ -122,8 +188,10 @@ func main() {
 
 	addr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
 	log.Printf("Starting unified server on %s", addr)
-	log.Printf("API endpoints: http://%s/api", addr)
-	log.Printf("MCP endpoints: http://%s/mcp", addr)
+	log.Printf("API endpoints: http://%s/api (requires authentication)", addr)
+	log.Printf("MCP endpoints: http://%s/mcp (requires authentication)", addr)
+	log.Printf("Admin endpoints: http://%s/admin (requires admin token)", addr)
+	log.Printf("Web UI: http://%s (no authentication)", addr)
 
 	if err := router.Run(addr); err != nil {
 		log.Fatalf("Failed to start server: %v", err)

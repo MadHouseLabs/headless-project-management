@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task #{{.Task.ID}} - {{.Task.Title}}</title>
+    <link rel="stylesheet" href="/static/css/style.iVD6YFX6.css">
+</head>
+<body>
+    <nav>
+        <a href="/">Projects</a>
+        <a href="/{{.ProjectID}}">{{if .Task.Project}}{{.Task.Project.Name}}{{else}}Board{{end}}</a>
+        <span class="muted">/ Task #{{.Task.ID}}</span>
+    </nav>
+
+    <header>
+        <h1>{{.Task.Title}}</h1>
+        <div class="task-meta">
+            <span class="status-{{.Task.Status}}">{{.Task.Status}}</span>
+            <span class="muted">•</span>
+            <span class="{{if eq .Task.Priority "urgent"}}priority-u{{else if eq .Task.Priority "high"}}priority-h{{else if eq .Task.Priority "medium"}}priority-m{{else}}priority-l{{end}}">
+                {{.Task.Priority}} priority
+            </span>
+            {{if .Task.Assignee}}
+            <span class="muted">•</span>
+            <span>Assigned to <strong>{{.Task.Assignee}}</strong></span>
+            {{end}}
+        </div>
+    </header>
+
+    <section class="task-content">
+        <h3>Description</h3>
+        <div class="content-box">
+            {{if .Task.Description}}
+            <p>{{.Task.Description}}</p>
+            {{else}}
+            <p class="muted">No description provided</p>
+            {{end}}
+        </div>
+    </section>
+
+    <section class="task-info">
+        <h3>Details</h3>
+        <table class="info-table">
+            <tr>
+                <th>Status</th>
+                <td><span class="status-{{.Task.Status}}">{{.Task.Status}}</span></td>
+                <th>Priority</th>
+                <td><span class="{{if eq .Task.Priority "urgent"}}priority-u{{else if eq .Task.Priority "high"}}priority-h{{else if eq .Task.Priority "medium"}}priority-m{{else}}priority-l{{end}}">{{.Task.Priority}}</span></td>
+            </tr>
+            <tr>
+                <th>Assignee</th>
+                <td>{{if .Task.Assignee}}{{.Task.Assignee}}{{else}}<span class="muted">Unassigned</span>{{end}}</td>
+                <th>Due Date</th>
+                <td>{{if .Task.DueDate}}{{.Task.DueDate.Format "Jan 2, 2006"}}{{else}}<span class="muted">Not set</span>{{end}}</td>
+            </tr>
+            <tr>
+                <th>Created</th>
+                <td>{{.Task.CreatedAt.Format "Jan 2, 2006 at 3:04 PM"}}</td>
+                <th>Updated</th>
+                <td>{{.Task.UpdatedAt.Format "Jan 2, 2006 at 3:04 PM"}}</td>
+            </tr>
+            {{if .Task.EstimatedHours}}
+            <tr>
+                <th>Estimated</th>
+                <td colspan="3">{{.Task.EstimatedHours}} hours</td>
+            </tr>
+            {{end}}
+        </table>
+    </section>
+
+    {{if .Task.Subtasks}}
+    <section>
+        <h3>Subtasks</h3>
+        <div class="content-box">
+            {{range .Task.Subtasks}}
+            <div class="subtask-item">
+                <span class="{{if eq .Status "done"}}done{{end}}">
+                    {{if eq .Status "done"}}☑{{else}}☐{{end}} {{.Title}}
+                </span>
+            </div>
+            {{end}}
+        </div>
+    </section>
+    {{end}}
+
+    {{if .Task.Labels}}
+    <section>
+        <h3>Labels</h3>
+        <div class="labels-list">
+            {{range .Task.Labels}}
+            <span class="label" style="background: {{.Color}}20; color: {{.Color}}">{{.Name}}</span>
+            {{end}}
+        </div>
+    </section>
+    {{end}}
+
+    {{if .Task.Comments}}
+    <section>
+        <h3>Comments ({{len .Task.Comments}})</h3>
+        {{range .Task.Comments}}
+        <div class="comment">
+            <div class="comment-header">
+                <strong>{{.UserName}}</strong>
+                <span class="muted">{{.CreatedAt.Format "Jan 2, 2006 at 3:04 PM"}}</span>
+            </div>
+            <div class="comment-body">
+                {{.Content}}
+            </div>
+        </div>
+        {{end}}
+    </section>
+    {{end}}
+
+    {{if .Task.Attachments}}
+    <section>
+        <h3>Attachments</h3>
+        <div class="content-box">
+            {{range .Task.Attachments}}
+            <div class="attachment-item">
+                📎 <a href="{{.FilePath}}">{{.FileName}}</a>
+            </div>
+            {{else}}
+            <p class="muted">No attachments</p>
+            {{end}}
+        </div>
+    </section>
+    {{end}}
+</body>
+</html>

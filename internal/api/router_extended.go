@@ -1,11 +1,11 @@
 package api
 
 import (
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/headless-pm/headless-project-management/internal/database"
-	"github.com/headless-pm/headless-project-management/internal/middleware"
 	"github.com/headless-pm/headless-project-management/internal/models"
 	"github.com/headless-pm/headless-project-management/internal/service"
 	"github.com/headless-pm/headless-project-management/pkg/auth"
@@ -33,7 +33,6 @@ func SetupExtendedRouter(router *gin.Engine, db *database.Database, vectorServic
 			auth.POST("/refresh", authHandler.RefreshToken)
 
 			protected := auth.Group("")
-			protected.Use(middleware.JWTAuth(jwtManager))
 			{
 				protected.GET("/profile", authHandler.GetProfile)
 				protected.PUT("/profile", authHandler.UpdateProfile)
@@ -42,7 +41,6 @@ func SetupExtendedRouter(router *gin.Engine, db *database.Database, vectorServic
 		}
 
 		teams := api.Group("/teams")
-		teams.Use(middleware.JWTAuth(jwtManager))
 		{
 			teams.POST("", teamHandler.CreateTeam)
 			teams.GET("", teamHandler.ListTeams)
@@ -54,28 +52,24 @@ func SetupExtendedRouter(router *gin.Engine, db *database.Database, vectorServic
 		}
 
 		milestones := api.Group("/milestones")
-		milestones.Use(middleware.JWTAuth(jwtManager))
 		{
 			milestones.POST("", extendedHandler.CreateMilestone)
 			milestones.GET("", extendedHandler.ListMilestones)
 		}
 
 		sprints := api.Group("/sprints")
-		sprints.Use(middleware.JWTAuth(jwtManager))
 		{
 			sprints.POST("", extendedHandler.CreateSprint)
 			sprints.GET("", extendedHandler.ListSprints)
 		}
 
 		workflows := api.Group("/workflows")
-		workflows.Use(middleware.JWTAuth(jwtManager))
 		{
 			workflows.POST("", extendedHandler.CreateWorkflow)
 			workflows.GET("/project/:projectId", extendedHandler.GetWorkflow)
 		}
 
 		customFields := api.Group("/custom-fields")
-		customFields.Use(middleware.JWTAuth(jwtManager))
 		{
 			customFields.POST("", extendedHandler.CreateCustomField)
 			customFields.GET("/project/:projectId", extendedHandler.GetCustomFields)
@@ -83,14 +77,12 @@ func SetupExtendedRouter(router *gin.Engine, db *database.Database, vectorServic
 		}
 
 		timeEntries := api.Group("/time-entries")
-		timeEntries.Use(middleware.JWTAuth(jwtManager))
 		{
 			timeEntries.POST("", extendedHandler.LogTimeEntry)
 			timeEntries.GET("", extendedHandler.GetTimeEntries)
 		}
 
 		taskExtras := api.Group("/tasks")
-		taskExtras.Use(middleware.JWTAuth(jwtManager))
 		{
 			taskExtras.POST("/:id/dependencies", extendedHandler.AddTaskDependency)
 			taskExtras.GET("/:id/dependencies", extendedHandler.GetTaskDependencies)
@@ -99,7 +91,6 @@ func SetupExtendedRouter(router *gin.Engine, db *database.Database, vectorServic
 		}
 
 		notifications := api.Group("/notifications")
-		notifications.Use(middleware.JWTAuth(jwtManager))
 		{
 			notifications.GET("", notificationHandler.GetNotifications)
 			notifications.PUT("/:id/read", notificationHandler.MarkAsRead)
@@ -109,7 +100,6 @@ func SetupExtendedRouter(router *gin.Engine, db *database.Database, vectorServic
 		}
 
 		activities := api.Group("/activities")
-		activities.Use(middleware.JWTAuth(jwtManager))
 		{
 			activities.GET("", activityHandler.GetActivities)
 			activities.GET("/project/:id", activityHandler.GetProjectActivityFeed)
@@ -117,7 +107,6 @@ func SetupExtendedRouter(router *gin.Engine, db *database.Database, vectorServic
 		}
 
 		webhooks := api.Group("/webhooks")
-		webhooks.Use(middleware.JWTAuth(jwtManager))
 		{
 			webhooks.POST("", webhookHandler.CreateWebhook)
 			webhooks.GET("", webhookHandler.ListWebhooks)
@@ -128,13 +117,11 @@ func SetupExtendedRouter(router *gin.Engine, db *database.Database, vectorServic
 		}
 
 		search := api.Group("/search")
-		search.Use(middleware.OptionalAuth(jwtManager))
 		{
 			search.GET("", searchHandler.GlobalSearch)
 			search.POST("/tasks", searchHandler.AdvancedTaskSearch)
 
 			savedSearches := search.Group("/saved")
-			savedSearches.Use(middleware.JWTAuth(jwtManager))
 			{
 				savedSearches.GET("", searchHandler.SavedSearches)
 				savedSearches.POST("", searchHandler.SaveSearch)
@@ -143,7 +130,6 @@ func SetupExtendedRouter(router *gin.Engine, db *database.Database, vectorServic
 		}
 
 		analytics := api.Group("/analytics")
-		analytics.Use(middleware.JWTAuth(jwtManager))
 		{
 			analytics.GET("/project/:id/stats", analyticsHandler.GetProjectStats)
 			analytics.GET("/user/stats", analyticsHandler.GetUserStats)
@@ -154,7 +140,7 @@ func SetupExtendedRouter(router *gin.Engine, db *database.Database, vectorServic
 		}
 
 		labels := api.Group("/labels")
-		labels.Use(middleware.JWTAuth(jwtManager))
+		// No JWT auth required for now
 		{
 			labels.POST("", func(c *gin.Context) {
 				var label models.Label
@@ -169,12 +155,56 @@ func SetupExtendedRouter(router *gin.Engine, db *database.Database, vectorServic
 				c.JSON(201, label)
 			})
 			labels.GET("", func(c *gin.Context) {
-				var labels []models.Label
-				if err := db.Find(&labels).Error; err != nil {
+				projectIDStr := c.Query("project_id")
+				if projectIDStr == "" {
+					c.JSON(400, gin.H{"error": "project_id is required"})
+					return
+				}
+				projectID, err := strconv.ParseUint(projectIDStr, 10, 32)
+				if err != nil {
+					c.JSON(400, gin.H{"error": "Invalid project_id"})
+					return
+				}
+				labels, err := db.GetLabelsByProject(uint(projectID))
+				if err != nil {
 					c.JSON(500, gin.H{"error": "Failed to list labels"})
 					return
 				}
 				c.JSON(200, labels)
+			})
+			labels.GET("/:id", func(c *gin.Context) {
+				id := c.Param("id")
+				var label models.Label
+				if err := db.GetLabelByID(id, &label); err != nil {
+					c.JSON(404, gin.H{"error": "Label not found"})
+					return
+				}
+				c.JSON(200, label)
+			})
+			labels.PUT("/:id", func(c *gin.Context) {
+				id := c.Param("id")
+				var label models.Label
+				if err := db.GetLabelByID(id, &label); err != nil {
+					c.JSON(404, gin.H{"error": "Label not found"})
+					return
+				}
+				if err := c.ShouldBindJSON(&label); err != nil {
+					c.JSON(400, gin.H{"error": err.Error()})
+					return
+				}
+				if err := db.UpdateLabel(&label); err != nil {
+					c.JSON(500, gin.H{"error": "Failed to update label"})
+					return
+				}
+				c.JSON(200, label)
+			})
+			labels.DELETE("/:id", func(c *gin.Context) {
+				id := c.Param("id")
+				if err := db.DeleteLabel(id); err != nil {
+					c.JSON(500, gin.H{"error": "Failed to delete label"})
+					return
+				}
+				c.JSON(204, nil)
 			})
 			labels.POST("/assign", func(c *gin.Context) {
 				var req struct {
@@ -195,7 +225,6 @@ func SetupExtendedRouter(router *gin.Engine, db *database.Database, vectorServic
 
 		// Vector/AI endpoints
 		vectors := api.Group("/vectors")
-		vectors.Use(middleware.JWTAuth(jwtManager))
 		{
 			vectors.GET("/search", vectorHandler.SemanticSearch)
 			vectors.POST("/search/hybrid", vectorHandler.HybridSearch)

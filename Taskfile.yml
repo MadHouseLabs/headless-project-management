@@ -21,9 +21,31 @@ tasks:
     generates:
       - '{{.BINARY}}'
 
+  web:install:
+    desc: Install web dependencies
+    dir: web
+    cmds:
+      - npm install
+
+  web:build:
+    desc: Build CSS with Vite
+    dir: web
+    deps: [web:install]
+    cmds:
+      - npm run build
+    sources:
+      - src/**/*
+      - package.json
+    generates:
+      - dist/**/*
+
+  build:all:
+    desc: Build both server and web assets
+    deps: [build, web:build]
+
   run:
     desc: Build and run the server
-    deps: [build]
+    deps: [build:all]
     cmds:
       - '{{.BINARY}}'
 
@@ -31,6 +53,13 @@ tasks:
     desc: Run server in development mode with hot reload
     cmds:
       - go run {{.MAIN}}
+
+  web:dev:
+    desc: Run Vite dev server for CSS hot reload
+    dir: web
+    deps: [web:install]
+    cmds:
+      - npm run dev
 
   clean:
     desc: Clean build artifacts and data

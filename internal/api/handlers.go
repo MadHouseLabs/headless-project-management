@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -44,13 +45,26 @@ func (h *Handler) CreateProject(c *gin.Context) {
 }
 
 func (h *Handler) GetProject(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid project ID"})
+	// Support both old "id" param and new "project" param
+	projectParam := c.Param("project")
+	if projectParam == "" {
+		projectParam = c.Param("id")
+	}
+
+	// Try to parse as ID first
+	if projectID, err := strconv.ParseUint(projectParam, 10, 32); err == nil {
+		project, err := h.db.GetProject(uint(projectID))
+		if err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Project not found"})
+			return
+		}
+		c.JSON(http.StatusOK, project)
 		return
 	}
 
-	project, err := h.db.GetProject(uint(id))
+	// Otherwise, treat as name and look up the project
+	var project models.Project
+	err := h.db.DB.Where("name = ?", projectParam).Preload("Tasks").First(&project).Error
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Project not found"})
 		return
@@ -77,9 +91,9 @@ func (h *Handler) ListProjects(c *gin.Context) {
 }
 
 func (h *Handler) UpdateProject(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	projectID, err := h.getProjectIDFromParam(c)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid project ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -89,7 +103,7 @@ func (h *Handler) UpdateProject(c *gin.Context) {
 		return
 	}
 
-	project.ID = uint(id)
+	project.ID = projectID
 	if err := h.db.UpdateProject(&project); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update project"})
 		return
@@ -104,13 +118,13 @@ func (h *Handler) UpdateProject(c *gin.Context) {
 }
 
 func (h *Handler) DeleteProject(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	projectID, err := h.getProjectIDFromParam(c)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid project ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	if err := h.db.DeleteProject(uint(id)); err != nil {
+	if err := h.db.DeleteProject(projectID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete project"})
 		return
 	}
@@ -119,15 +133,27 @@ func (h *Handler) DeleteProject(c *gin.Context) {
 }
 
 func (h *Handler) CreateTask(c *gin.Context) {
-	var task models.Task
-	if err := c.ShouldBindJSON(&task); err != nil {
+	var input struct {
+		models.Task
+		Labels []string `json:"labels"`
+	}
+	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
+	task := input.Task
 	if err := h.db.CreateTask(&task); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create task"})
 		return
+	}
+
+	// Handle labels if provided
+	if len(input.Labels) > 0 {
+		if err := h.db.AssignLabelsToTask(task.ID, task.ProjectID, input.Labels); err != nil {
+			// Log error but don't fail the request
+			_ = err
+		}
 	}
 
 	// Queue embedding generation
@@ -135,7 +161,13 @@ func (h *Handler) CreateTask(c *gin.Context) {
 		worker.QueueJob("task", task.ID)
 	}
 
-	c.JSON(http.StatusCreated, task)
+	// Reload task with labels
+	taskWithLabels, _ := h.db.GetTask(task.ID)
+	if taskWithLabels != nil {
+		c.JSON(http.StatusCreated, taskWithLabels)
+	} else {
+		c.JSON(http.StatusCreated, task)
+	}
 }
 
 func (h *Handler) GetTask(c *gin.Context) {
@@ -179,23 +211,124 @@ func (h *Handler) ListTasks(c *gin.Context) {
 	c.JSON(http.StatusOK, tasks)
 }
 
-func (h *Handler) UpdateTask(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+// Project-scoped task handlers
+func (h *Handler) ListProjectTasks(c *gin.Context) {
+	projectID, err := h.getProjectIDFromParam(c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	var status *models.TaskStatus
+	if statusStr := c.Query("status"); statusStr != "" {
+		s := models.TaskStatus(statusStr)
+		status = &s
+	}
+
+	tasks, err := h.db.ListTasks(&projectID, status)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list tasks"})
+		return
+	}
+
+	c.JSON(http.StatusOK, tasks)
+}
+
+func (h *Handler) CreateProjectTask(c *gin.Context) {
+	projectID, err := h.getProjectIDFromParam(c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	var input struct {
+		models.Task
+		Labels []string `json:"labels"`
+	}
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	task := input.Task
+	task.ProjectID = projectID
+
+	if err := h.db.CreateTask(&task); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create task"})
+		return
+	}
+
+	// Handle labels if provided
+	if len(input.Labels) > 0 {
+		if err := h.db.AssignLabelsToTask(task.ID, task.ProjectID, input.Labels); err != nil {
+			// Log error but don't fail the request
+			_ = err
+		}
+	}
+
+	// Queue embedding generation
+	if worker := service.GetEmbeddingWorker(); worker != nil {
+		worker.QueueJob("task", task.ID)
+	}
+
+	// Reload task with labels
+	taskWithLabels, _ := h.db.GetTask(task.ID)
+	if taskWithLabels != nil {
+		c.JSON(http.StatusCreated, taskWithLabels)
+	} else {
+		c.JSON(http.StatusCreated, task)
+	}
+}
+
+func (h *Handler) UpdateProjectTask(c *gin.Context) {
+	projectID, err := h.getProjectIDFromParam(c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	taskID, err := strconv.ParseUint(c.Param("task_id"), 10, 32)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid task ID"})
 		return
 	}
 
-	var task models.Task
-	if err := c.ShouldBindJSON(&task); err != nil {
+	// Verify task belongs to project
+	existingTask, err := h.db.GetTask(uint(taskID))
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Task not found"})
+		return
+	}
+
+	if existingTask.ProjectID != projectID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Task does not belong to this project"})
+		return
+	}
+
+	var input struct {
+		models.Task
+		Labels []string `json:"labels"`
+	}
+	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	task.ID = uint(id)
+	task := input.Task
+	task.ID = uint(taskID)
+	task.ProjectID = projectID
+
 	if err := h.db.UpdateTask(&task); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update task"})
 		return
+	}
+
+	// Handle labels if provided
+	if input.Labels != nil {
+		if err := h.db.AssignLabelsToTask(task.ID, projectID, input.Labels); err != nil {
+			// Log error but don't fail the request
+			_ = err
+		}
 	}
 
 	// Queue embedding regeneration
@@ -203,7 +336,93 @@ func (h *Handler) UpdateTask(c *gin.Context) {
 		worker.QueueJob("task", task.ID)
 	}
 
+	// Reload task with labels
+	taskWithLabels, _ := h.db.GetTask(task.ID)
+	if taskWithLabels != nil {
+		c.JSON(http.StatusOK, taskWithLabels)
+	} else {
+		c.JSON(http.StatusOK, task)
+	}
+}
+
+func (h *Handler) GetProjectTask(c *gin.Context) {
+	projectID, err := h.getProjectIDFromParam(c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	taskID, err := strconv.ParseUint(c.Param("task_id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid task ID"})
+		return
+	}
+
+	task, err := h.db.GetTask(uint(taskID))
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Task not found"})
+		return
+	}
+
+	if task.ProjectID != projectID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Task does not belong to this project"})
+		return
+	}
+
 	c.JSON(http.StatusOK, task)
+}
+
+func (h *Handler) UpdateTask(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid task ID"})
+		return
+	}
+
+	var input struct {
+		models.Task
+		Labels []string `json:"labels"`
+	}
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	task := input.Task
+	task.ID = uint(id)
+
+	// Get existing task to preserve ProjectID
+	existingTask, err := h.db.GetTask(task.ID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Task not found"})
+		return
+	}
+
+	if err := h.db.UpdateTask(&task); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update task"})
+		return
+	}
+
+	// Handle labels if provided
+	if input.Labels != nil {
+		if err := h.db.AssignLabelsToTask(task.ID, existingTask.ProjectID, input.Labels); err != nil {
+			// Log error but don't fail the request
+			_ = err
+		}
+	}
+
+	// Queue embedding regeneration
+	if worker := service.GetEmbeddingWorker(); worker != nil {
+		worker.QueueJob("task", task.ID)
+	}
+
+	// Reload task with labels
+	taskWithLabels, _ := h.db.GetTask(task.ID)
+	if taskWithLabels != nil {
+		c.JSON(http.StatusOK, taskWithLabels)
+	} else {
+		c.JSON(http.StatusOK, task)
+	}
 }
 
 func (h *Handler) DeleteTask(c *gin.Context) {
@@ -288,3 +507,67 @@ func (h *Handler) UploadAttachment(c *gin.Context) {
 
 	c.JSON(http.StatusCreated, attachment)
 }
+
+// Project-scoped label handlers
+func (h *Handler) ListProjectLabels(c *gin.Context) {
+	projectID, err := h.getProjectIDFromParam(c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	labels, err := h.db.GetLabelsByProject(projectID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list labels"})
+		return
+	}
+
+	c.JSON(http.StatusOK, labels)
+}
+
+// Project users handler
+func (h *Handler) ListProjectUsers(c *gin.Context) {
+	projectID, err := h.getProjectIDFromParam(c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Get unique assignees from tasks in this project
+	type User struct {
+		Name string `json:"name"`
+	}
+
+	var users []User
+	err = h.db.DB.Table("tasks").
+		Select("DISTINCT assignee as name").
+		Where("project_id = ? AND assignee IS NOT NULL AND assignee != ''", projectID).
+		Scan(&users).Error
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list users"})
+		return
+	}
+
+	c.JSON(http.StatusOK, users)
+}
+
+// Helper to get project ID from path parameter (supports both ID and name)
+func (h *Handler) getProjectIDFromParam(c *gin.Context) (uint, error) {
+	projectParam := c.Param("project")
+
+	// Try to parse as ID first
+	if projectID, err := strconv.ParseUint(projectParam, 10, 32); err == nil {
+		return uint(projectID), nil
+	}
+
+	// Otherwise, treat as name and look up the project
+	var project models.Project
+	err := h.db.DB.Where("name = ?", projectParam).First(&project).Error
+	if err != nil {
+		return 0, fmt.Errorf("project not found: %s", projectParam)
+	}
+
+	return project.ID, nil
+}
+
