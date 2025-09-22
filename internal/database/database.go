@@ -13,6 +13,7 @@ import (
 
 type Database struct {
 	*gorm.DB
+	embeddingCallback func(entityType string, entityID uint)
 }
 
 func NewDatabase(dataDir string) (*Database, error) {
@@ -68,8 +69,21 @@ func NewDatabase(dataDir string) (*Database, error) {
 	return &Database{DB: db}, nil
 }
 
+func (db *Database) SetEmbeddingCallback(callback func(entityType string, entityID uint)) {
+	db.embeddingCallback = callback
+}
+
 func (db *Database) CreateProject(project *models.Project) error {
-	return db.Create(project).Error
+	if err := db.Create(project).Error; err != nil {
+		return err
+	}
+
+	// Queue embedding generation for the new project
+	if db.embeddingCallback != nil {
+		db.embeddingCallback("project", project.ID)
+	}
+
+	return nil
 }
 
 func (db *Database) GetProject(id uint) (*models.Project, error) {
@@ -92,7 +106,16 @@ func (db *Database) ListProjects(status *models.ProjectStatus) ([]models.Project
 }
 
 func (db *Database) UpdateProject(project *models.Project) error {
-	return db.Save(project).Error
+	if err := db.Save(project).Error; err != nil {
+		return err
+	}
+
+	// Queue embedding generation for the updated project
+	if db.embeddingCallback != nil {
+		db.embeddingCallback("project", project.ID)
+	}
+
+	return nil
 }
 
 func (db *Database) DeleteProject(id uint) error {
@@ -100,7 +123,16 @@ func (db *Database) DeleteProject(id uint) error {
 }
 
 func (db *Database) CreateTask(task *models.Task) error {
-	return db.Create(task).Error
+	if err := db.Create(task).Error; err != nil {
+		return err
+	}
+
+	// Queue embedding generation for the new task
+	if db.embeddingCallback != nil {
+		db.embeddingCallback("task", task.ID)
+	}
+
+	return nil
 }
 
 func (db *Database) GetTask(id uint) (*models.Task, error) {
@@ -135,7 +167,16 @@ func (db *Database) ListTasks(projectID *uint, status *models.TaskStatus) ([]mod
 }
 
 func (db *Database) UpdateTask(task *models.Task) error {
-	return db.Save(task).Error
+	if err := db.Save(task).Error; err != nil {
+		return err
+	}
+
+	// Queue embedding generation for the updated task
+	if db.embeddingCallback != nil {
+		db.embeddingCallback("task", task.ID)
+	}
+
+	return nil
 }
 
 func (db *Database) DeleteTask(id uint) error {

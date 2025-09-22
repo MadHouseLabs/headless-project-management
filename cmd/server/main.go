@@ -64,6 +64,13 @@ func main() {
 	vectorService := service.NewVectorService(db, embeddingProvider)
 	embeddingWorker := service.InitializeEmbeddingWorker(vectorService)
 
+	// Set up embedding callback for database operations
+	db.SetEmbeddingCallback(func(entityType string, entityID uint) {
+		if embeddingWorker != nil {
+			embeddingWorker.QueueJob(entityType, entityID)
+		}
+	})
+
 	router := gin.Default()
 	router.RedirectTrailingSlash = false
 	router.Use(cors.Default())
