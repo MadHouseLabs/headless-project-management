@@ -1,10 +1,15 @@
 # Build stage
-FROM golang:1.23-alpine AS builder
+FROM golang:1.23-bookworm AS builder
 
 WORKDIR /app
 
 # Install build dependencies
-RUN apk add --no-cache gcc g++ musl-dev sqlite-dev
+RUN apt-get update && apt-get install -y \
+    gcc \
+    g++ \
+    sqlite3 \
+    libsqlite3-dev \
+    && rm -rf /var/lib/apt/lists/*
 
 # Copy go mod files
 COPY go.mod go.sum ./
@@ -13,13 +18,19 @@ RUN go mod download
 # Copy source code
 COPY . .
 
-# Build the application with sqlite-vec (only for amd64 to avoid ARM cross-compilation issues)
-RUN CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo -o server cmd/server/main.go
+# Build the application
+ENV CGO_ENABLED=1
+ENV GOOS=linux
+ENV GOARCH=amd64
+RUN go build -o server cmd/server/main.go
 
 # Final stage
-FROM alpine:latest
+FROM debian:bookworm-slim
 
-RUN apk --no-cache add ca-certificates sqlite
+RUN apt-get update && apt-get install -y \
+    ca-certificates \
+    sqlite3 \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
