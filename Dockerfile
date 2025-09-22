@@ -13,8 +13,8 @@ RUN go mod download
 # Copy source code
 COPY . .
 
-# Build the application with proper tags for sqlite-vec
-RUN CGO_ENABLED=1 GOOS=linux go build -tags "sqlite_vec" -a -installsuffix cgo -o server cmd/server/main.go
+# Build the application with sqlite-vec (only for amd64 to avoid ARM cross-compilation issues)
+RUN CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo -o server cmd/server/main.go
 
 # Final stage
 FROM alpine:latest
