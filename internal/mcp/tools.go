@@ -46,7 +46,7 @@ func (s *EnhancedMCPServer) getProject(args []byte) (*ToolResponse, error) {
 
 func (s *EnhancedMCPServer) updateProject(args []byte) (*ToolResponse, error) {
 	var input struct {
-		ID          uint   `json:"id"`
+		ID          uint   `json:"project_id"`
 		Name        string `json:"name"`
 		Description string `json:"description"`
 		Status      string `json:"status"`
@@ -173,7 +173,7 @@ func (s *EnhancedMCPServer) getTask(args []byte) (*ToolResponse, error) {
 
 func (s *EnhancedMCPServer) updateTask(args []byte) (*ToolResponse, error) {
 	var input struct {
-		ID          uint   `json:"id"`
+		ID          uint   `json:"task_id"`
 		Title       string `json:"title"`
 		Description string `json:"description"`
 		Status      string `json:"status"`
