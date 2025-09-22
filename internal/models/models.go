@@ -71,7 +71,7 @@ type Project struct {
 	Description string        `json:"description"`
 	Status      ProjectStatus `json:"status" gorm:"default:'active'"`
 	OwnerID     uint          `json:"owner_id"`
-	TeamID      *uint         `json:"team_id"`
+	// TeamID removed - simplified model
 	StartDate   *time.Time    `json:"start_date"`
 	EndDate     *time.Time    `json:"end_date"`
 	CreatedAt   time.Time     `json:"created_at"`
@@ -79,7 +79,7 @@ type Project struct {
 	DeletedAt   *time.Time    `json:"deleted_at" gorm:"index"`
 	Tasks       []Task        `json:"tasks,omitempty" gorm:"foreignKey:ProjectID"`
 	Owner       *User         `json:"owner,omitempty" gorm:"foreignKey:OwnerID"`
-	Team        *Team         `json:"team,omitempty" gorm:"foreignKey:TeamID"`
+	// Team removed - simplified model
 	Members     []User        `json:"members,omitempty" gorm:"many2many:project_members;"`
 }
 
@@ -88,8 +88,7 @@ type Task struct {
 	ProjectID       uint         `json:"project_id" gorm:"not null"`
 	ParentID        *uint        `json:"parent_id,omitempty"`
 	EpicID          *uint        `json:"epic_id,omitempty"`
-	MilestoneID     *uint        `json:"milestone_id,omitempty"`
-	SprintID        *uint        `json:"sprint_id,omitempty"`
+	// MilestoneID and SprintID removed - simplified model
 	Title           string       `json:"title" gorm:"not null"`
 	Description     string       `json:"description"`
 	Status          TaskStatus   `json:"status" gorm:"default:'todo'"`
@@ -110,8 +109,7 @@ type Task struct {
 	Project         *Project     `json:"project,omitempty" gorm:"foreignKey:ProjectID"`
 	Parent          *Task        `json:"parent,omitempty" gorm:"foreignKey:ParentID"`
 	Epic            *Epic        `json:"epic,omitempty" gorm:"foreignKey:EpicID"`
-	Milestone       *Milestone   `json:"milestone,omitempty" gorm:"foreignKey:MilestoneID"`
-	Sprint          *Sprint      `json:"sprint,omitempty" gorm:"foreignKey:SprintID"`
+	// Milestone and Sprint removed - simplified model
 	AssigneeUser    *User        `json:"assignee_user,omitempty" gorm:"foreignKey:AssigneeID"`
 	Creator         *User        `json:"creator,omitempty" gorm:"foreignKey:CreatedBy"`
 	Updater         *User        `json:"updater,omitempty" gorm:"foreignKey:UpdatedBy"`
@@ -121,6 +119,16 @@ type Task struct {
 	Labels          []Label      `json:"labels,omitempty" gorm:"many2many:task_labels;"`
 	Watchers        []User       `json:"watchers,omitempty" gorm:"many2many:task_watchers;"`
 	Dependencies    []TaskDependency `json:"dependencies,omitempty" gorm:"foreignKey:TaskID"`
+}
+
+// TaskDependency represents a dependency between tasks
+type TaskDependency struct {
+	ID           uint   `json:"id" gorm:"primaryKey"`
+	TaskID       uint   `json:"task_id" gorm:"not null"`
+	DependsOnID  uint   `json:"depends_on_id" gorm:"not null"`
+	Type         string `json:"type" gorm:"default:'finish_to_start'"` // finish_to_start, start_to_start, etc.
+	Task         *Task  `json:"task,omitempty" gorm:"foreignKey:TaskID"`
+	DependsOn    *Task  `json:"depends_on,omitempty" gorm:"foreignKey:DependsOnID"`
 }
 
 type Comment struct {

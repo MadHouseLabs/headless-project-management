@@ -32,33 +32,26 @@ func NewDatabase(dataDir string) (*Database, error) {
 	}
 
 	if err := db.AutoMigrate(
+		// Core entities
 		&models.User{},
-		&models.Team{},
-		&models.TeamMember{},
-		&models.Session{},
-		&models.RefreshToken{},
 		&models.Project{},
 		&models.Epic{},
 		&models.Task{},
+		&models.TaskDependency{},
+		&models.Label{},
 		&models.Comment{},
 		&models.Attachment{},
-		&models.Label{},
-		&models.Milestone{},
-		&models.Sprint{},
-		&models.Workflow{},
-		&models.WorkflowState{},
-		&models.CustomField{},
-		&models.FieldValue{},
-		&models.TaskDependency{},
-		&models.TimeEntry{},
-		&models.Activity{},
-		&models.Notification{},
-		&models.Webhook{},
+
+		// Auth entities
+		&models.Session{},
+		&models.RefreshToken{},
+		&models.APIToken{},
+
+		// Embedding entities (keep for semantic search)
 		&models.Embedding{},
 		&models.ProjectEmbedding{},
 		&models.TaskEmbedding{},
 		&models.DocumentEmbedding{},
-		&models.APIToken{},
 	); err != nil {
 		return nil, fmt.Errorf("failed to migrate database: %w", err)
 	}
