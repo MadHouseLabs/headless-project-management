@@ -17,6 +17,7 @@ func SetupExtendedRouter(router *gin.Engine, db *database.Database, vectorServic
 	authHandler := NewAuthHandler(db, jwtManager)
 	teamHandler := NewTeamHandler(db)
 	extendedHandler := NewExtendedHandler(db)
+	epicHandler := NewEpicHandler(db)
 	notificationHandler := NewNotificationHandler(db)
 	activityHandler := NewActivityHandler(db, notificationHandler)
 	webhookHandler := NewWebhookHandler(db)
@@ -61,6 +62,19 @@ func SetupExtendedRouter(router *gin.Engine, db *database.Database, vectorServic
 		{
 			sprints.POST("", extendedHandler.CreateSprint)
 			sprints.GET("", extendedHandler.ListSprints)
+		}
+
+		epics := api.Group("/epics")
+		{
+			epics.POST("", epicHandler.CreateEpic)
+			epics.GET("", epicHandler.ListEpics)
+			epics.GET("/:id", epicHandler.GetEpic)
+			epics.PUT("/:id", epicHandler.UpdateEpic)
+			epics.DELETE("/:id", epicHandler.DeleteEpic)
+			epics.POST("/:id/tasks", epicHandler.AssignTaskToEpic)
+			epics.DELETE("/tasks/:taskId", epicHandler.RemoveTaskFromEpic)
+			epics.GET("/:id/progress", epicHandler.GetEpicProgress)
+			epics.GET("/project/:projectId", epicHandler.GetProjectEpics)
 		}
 
 		workflows := api.Group("/workflows")

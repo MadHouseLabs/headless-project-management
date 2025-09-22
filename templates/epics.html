@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Epics - {{.Project.Name}}</title>
+    <link rel="stylesheet" href="/static/css/style.iVD6YFX6.css">
+</head>
+<body>
+    <nav style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <a href="/">Projects</a>
+            <span class="muted">/</span>
+            <a href="/{{.Project.ID}}">{{.Project.Name}}</a>
+            <span class="muted">/ Epics</span>
+        </div>
+        <div>
+            <a href="/{{.Project.ID}}">View Tasks</a>
+        </div>
+    </nav>
+
+    <header>
+        <h1>Epics</h1>
+        <div class="task-meta">
+            <span class="muted">{{.Project.Name}}</span>
+        </div>
+    </header>
+
+    {{if .Epics}}
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Status</th>
+                <th>Progress</th>
+                <th>Tasks</th>
+                <th>Start Date</th>
+                <th>End Date</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{range .Epics}}
+            <tr>
+                <td>#{{.ID}}</td>
+                <td><a href="/{{$.Project.ID}}/epics/{{.ID}}">{{.Name}}</a></td>
+                <td><span class="status-{{.Status}}">{{.Status}}</span></td>
+                <td>{{.Progress}}%</td>
+                <td>{{len .Tasks}}</td>
+                <td>
+                    {{if .StartDate}}
+                        {{.StartDate.Format "Jan 2, 2006"}}
+                    {{else}}
+                        <span class="muted">Not set</span>
+                    {{end}}
+                </td>
+                <td>
+                    {{if .EndDate}}
+                        {{.EndDate.Format "Jan 2, 2006"}}
+                    {{else}}
+                        <span class="muted">Not set</span>
+                    {{end}}
+                </td>
+            </tr>
+            {{end}}
+        </tbody>
+    </table>
+    {{else}}
+    <p>No epics found. Create epics using the API.</p>
+    {{end}}
+</body>
+</html>

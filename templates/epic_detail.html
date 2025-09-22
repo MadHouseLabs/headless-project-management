@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Epic.Name}} - Epic Details</title>
+    <link rel="stylesheet" href="/static/css/style.iVD6YFX6.css">
+</head>
+<body>
+    <nav style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <a href="/">Projects</a>
+            <span class="muted">/</span>
+            <a href="/{{.Project.ID}}">{{.Project.Name}}</a>
+            <span class="muted">/</span>
+            <a href="/{{.Project.ID}}/epics">Epics</a>
+            <span class="muted">/ Epic #{{.Epic.ID}}</span>
+        </div>
+        <div>
+            <a href="/{{.Project.ID}}">View Tasks</a>
+            <span class="muted">|</span>
+            <a href="/{{.Project.ID}}/epics">Manage Epics</a>
+        </div>
+    </nav>
+
+    <header>
+        <h1>{{.Epic.Name}}</h1>
+        <div class="task-meta">
+            <span class="status-{{.Epic.Status}}">{{.Epic.Status}}</span>
+            <span class="muted">•</span>
+            <span>{{.Epic.Progress}}% complete</span>
+            <span class="muted">•</span>
+            <span>{{.CompletedTasks}} of {{.TotalTasks}} tasks done</span>
+        </div>
+    </header>
+
+    {{if .Epic.Description}}
+    <section>
+        <h3>Description</h3>
+        <p>{{.Epic.Description}}</p>
+    </section>
+    {{end}}
+
+    <section>
+        <h3>Details</h3>
+        <dl>
+            <dt>Epic ID</dt>
+            <dd>#{{.Epic.ID}}</dd>
+
+            <dt>Project</dt>
+            <dd>{{.Project.Name}}</dd>
+
+            <dt>Status</dt>
+            <dd class="status-{{.Epic.Status}}">{{.Epic.Status}}</dd>
+
+            <dt>Progress</dt>
+            <dd>{{.Epic.Progress}}% ({{.CompletedTasks}} of {{.TotalTasks}} tasks completed)</dd>
+
+            <dt>Start Date</dt>
+            <dd>
+                {{if .Epic.StartDate}}
+                    {{.Epic.StartDate.Format "January 2, 2006"}}
+                {{else}}
+                    <span class="muted">Not set</span>
+                {{end}}
+            </dd>
+
+            <dt>End Date</dt>
+            <dd>
+                {{if .Epic.EndDate}}
+                    {{.Epic.EndDate.Format "January 2, 2006"}}
+                {{else}}
+                    <span class="muted">Not set</span>
+                {{end}}
+            </dd>
+
+            <dt>Created</dt>
+            <dd>{{.Epic.CreatedAt.Format "January 2, 2006 at 3:04 PM"}}</dd>
+
+            <dt>Last Updated</dt>
+            <dd>{{.Epic.UpdatedAt.Format "January 2, 2006 at 3:04 PM"}}</dd>
+        </dl>
+    </section>
+
+    <section>
+        <h3>Tasks in this Epic</h3>
+        {{if .Epic.Tasks}}
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Title</th>
+                    <th>Status</th>
+                    <th>Priority</th>
+                    <th>Assignee</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{range .Epic.Tasks}}
+                <tr>
+                    <td>#{{.ID}}</td>
+                    <td><a href="/{{$.Project.ID}}/{{.ID}}">{{.Title}}</a></td>
+                    <td><span class="status-{{.Status}}">{{.Status}}</span></td>
+                    <td><span class="priority-{{.Priority | slice 0 1}}">{{.Priority}}</span></td>
+                    <td>
+                        {{if .Assignee}}
+                            {{.Assignee}}
+                        {{else}}
+                            <span class="muted">Unassigned</span>
+                        {{end}}
+                    </td>
+                </tr>
+                {{end}}
+            </tbody>
+        </table>
+        {{else}}
+        <p class="muted">No tasks assigned to this epic yet. Use the API to assign tasks to this epic.</p>
+        {{end}}
+    </section>
+</body>
+</html>

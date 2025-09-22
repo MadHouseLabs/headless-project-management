@@ -118,7 +118,7 @@ func (h *WebHandler) ProjectBoardPage(c *gin.Context) {
 		Distinct("assignee").
 		Pluck("assignee", &assignees)
 
-	// Get selected label IDs and assignees from query
+	// Get selected filters from query
 	selectedLabelIDs := c.QueryArray("labels")
 	selectedAssignees := c.QueryArray("assignees")
 
@@ -281,4 +281,92 @@ func (h *WebHandler) TasksPage(c *gin.Context) {
 		Projects:      projects,
 		Filters:       filters,
 	})
+}
+
+func (h *WebHandler) EpicsPage(c *gin.Context) {
+	// Get project ID from URL
+	projectID := c.Param("projectId")
+
+	// Get project details
+	var project models.Project
+	if err := h.db.DB.First(&project, projectID).Error; err != nil {
+		c.HTML(http.StatusNotFound, "error.html", gin.H{
+			"Error": "Project not found",
+		})
+		return
+	}
+
+	// Get epics for this project
+	epics, err := h.db.GetEpicsByProject(project.ID)
+	if err != nil {
+		c.HTML(http.StatusInternalServerError, "error.html", gin.H{
+			"Error": "Failed to load epics",
+		})
+		return
+	}
+
+	// Calculate progress for each epic
+	for i := range epics {
+		if len(epics[i].Tasks) > 0 {
+			progress, _ := h.db.CalculateEpicProgress(epics[i].ID)
+			epics[i].Progress = progress
+		}
+	}
+
+	// Render epics template
+	c.HTML(http.StatusOK, "epics.html", gin.H{
+		"Project": project,
+		"Epics":   epics,
+	})
+}
+
+func (h *WebHandler) EpicDetailPage(c *gin.Context) {
+	// Get project ID and epic ID from URL
+	projectID := c.Param("projectId")
+	epicID := c.Param("epicId")
+
+	// Get project details
+	var project models.Project
+	if err := h.db.DB.First(&project, projectID).Error; err != nil {
+		c.HTML(http.StatusNotFound, "error.html", gin.H{
+			"Error": "Project not found",
+		})
+		return
+	}
+
+	// Get epic details with tasks
+	epic, err := h.db.GetEpic(parseUint(epicID))
+	if err != nil {
+		c.HTML(http.StatusNotFound, "error.html", gin.H{
+			"Error": "Epic not found",
+		})
+		return
+	}
+
+	// Calculate progress
+	if len(epic.Tasks) > 0 {
+		progress, _ := h.db.CalculateEpicProgress(epic.ID)
+		epic.Progress = progress
+	}
+
+	// Calculate task statistics
+	completedTasks := 0
+	for _, task := range epic.Tasks {
+		if task.Status == models.TaskStatusDone {
+			completedTasks++
+		}
+	}
+
+	// Render epic detail template
+	c.HTML(http.StatusOK, "epic_detail.html", gin.H{
+		"Project":        project,
+		"Epic":           epic,
+		"TotalTasks":     len(epic.Tasks),
+		"CompletedTasks": completedTasks,
+	})
+}
+
+func parseUint(s string) uint {
+	val, _ := strconv.ParseUint(s, 10, 32)
+	return uint(val)
 }

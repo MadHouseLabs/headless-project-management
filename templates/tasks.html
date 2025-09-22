@@ -7,11 +7,21 @@
     <link rel="stylesheet" href="/static/css/style.iVD6YFX6.css">
 </head>
 <body>
-    <nav>
-        <a href="/">← Back to Projects</a>
+    <nav style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <a href="/">Projects</a>
+            <span class="muted">/</span>
+            <a href="/{{.Project.ID}}">{{.Project.Name}}</a>
+            <span class="muted">/ Tasks</span>
+        </div>
+        <div>
+            <a href="/{{.Project.ID}}/epics">Manage Epics</a>
+        </div>
     </nav>
 
-    <h1>{{.Project.Name}}</h1>
+    <header>
+        <h1>{{.Project.Name}} - Tasks</h1>
+    </header>
 
     {{if or .Labels .Assignees}}
     <div class="filters">

@@ -38,6 +38,7 @@ func NewDatabase(dataDir string) (*Database, error) {
 		&models.Session{},
 		&models.RefreshToken{},
 		&models.Project{},
+		&models.Epic{},
 		&models.Task{},
 		&models.Comment{},
 		&models.Attachment{},
@@ -253,4 +254,82 @@ func (db *Database) AssignLabelsToTask(taskID uint, projectID uint, labelNames [
 	}
 
 	return nil
+}
+
+// Epic CRUD methods
+func (db *Database) CreateEpic(epic *models.Epic) error {
+	return db.Create(epic).Error
+}
+
+func (db *Database) GetEpic(id uint) (*models.Epic, error) {
+	var epic models.Epic
+	err := db.Preload("Project").Preload("Tasks").First(&epic, id).Error
+	if err != nil {
+		return nil, err
+	}
+	return &epic, nil
+}
+
+func (db *Database) ListEpics(projectID *uint, status *models.EpicStatus) ([]models.Epic, error) {
+	var epics []models.Epic
+	query := db.DB
+
+	if projectID != nil {
+		query = query.Where("project_id = ?", *projectID)
+	}
+	if status != nil {
+		query = query.Where("status = ?", *status)
+	}
+
+	err := query.Preload("Tasks").Find(&epics).Error
+	return epics, err
+}
+
+func (db *Database) UpdateEpic(epic *models.Epic) error {
+	return db.Save(epic).Error
+}
+
+func (db *Database) DeleteEpic(id uint) error {
+	return db.Delete(&models.Epic{}, id).Error
+}
+
+func (db *Database) GetEpicsByProject(projectID uint) ([]models.Epic, error) {
+	var epics []models.Epic
+	err := db.Where("project_id = ?", projectID).Preload("Tasks").Find(&epics).Error
+	return epics, err
+}
+
+func (db *Database) AssignTaskToEpic(taskID uint, epicID uint) error {
+	return db.Model(&models.Task{}).Where("id = ?", taskID).Update("epic_id", epicID).Error
+}
+
+func (db *Database) RemoveTaskFromEpic(taskID uint) error {
+	return db.Model(&models.Task{}).Where("id = ?", taskID).Update("epic_id", nil).Error
+}
+
+func (db *Database) CalculateEpicProgress(epicID uint) (int, error) {
+	var epic models.Epic
+	if err := db.Preload("Tasks").First(&epic, epicID).Error; err != nil {
+		return 0, err
+	}
+
+	if len(epic.Tasks) == 0 {
+		return 0, nil
+	}
+
+	completedTasks := 0
+	for _, task := range epic.Tasks {
+		if task.Status == models.TaskStatusDone {
+			completedTasks++
+		}
+	}
+
+	progress := (completedTasks * 100) / len(epic.Tasks)
+
+	// Update the epic progress
+	if err := db.Model(&epic).Update("progress", progress).Error; err != nil {
+		return 0, err
+	}
+
+	return progress, nil
 }

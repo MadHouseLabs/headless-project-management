@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-A headless project management system built with Go, featuring REST APIs and MCP (Model Context Protocol) support for AI integration. The system uses SQLite with vector embeddings (sqlite-vec) for semantic search capabilities, integrated with Azure OpenAI.
+Headless Project Management System - A Go-based REST API and MCP server for project management with AI-powered semantic search capabilities using vector embeddings.
 
 ## Key Commands
 
@@ -12,27 +12,30 @@ A headless project management system built with Go, featuring REST APIs and MCP 
 ```bash
 task run          # Build and run server (production)
 task dev          # Run with hot reload (development)
-task build        # Build binary only
+task build:all    # Build server and web assets
+task web:dev      # Run Vite dev server for CSS hot reload (separate terminal)
 task clean        # Clean build artifacts and data
 ```
 
 ### Testing
 ```bash
 task test         # Run all tests
-task test:coverage # Run tests with coverage
-task api:test     # Test API endpoints
+go test -v -run TestName ./internal/service/  # Run single test
+go test -v ./internal/database -run TestDatabaseConnection
 ```
 
 ### Code Quality
 ```bash
-task fmt          # Format Go code
-task lint         # Run golangci-lint
+go fmt ./...      # Format Go code
+go vet ./...      # Run Go vet
+golangci-lint run # Run linter (if installed)
 ```
 
 ### Docker Operations
 ```bash
 task docker:build # Build Docker image
-task docker:run   # Run Docker container
+source docker-remote-env.sh  # Configure Docker for remote VM
+docker logs headless-pm       # View application logs on VM
 ```
 
 ## Architecture
@@ -78,11 +81,21 @@ task docker:run   # Run Docker container
 
 ## Environment Configuration
 
-Required `.env` file:
+### Required for AI Features
 ```bash
-AZURE_OPENAI_ENDPOINT=<your-endpoint>
-AZURE_OPENAI_API_KEY=<your-key>
-AZURE_OPENAI_EMBEDDING_DEPLOYMENT=<deployment-name>
+AZURE_OPENAI_ENDPOINT=https://your-instance.openai.azure.com
+AZURE_OPENAI_API_KEY=your-key
+AZURE_OPENAI_EMBEDDING_DEPLOYMENT=your-embedding-model
+```
+
+### Authentication & Server
+```bash
+ADMIN_API_TOKEN=your-admin-token  # If not set, generates temporary token
+DATABASE_DIR=/data                # Database location (default: ./data)
+UPLOAD_DIR=/data/uploads          # File upload location
+MCP_ENABLED=true                  # Enable MCP server (default: true)
+SERVER_HOST=0.0.0.0               # Server bind address
+SERVER_PORT=8080                  # Server port
 ```
 
 ## MCP Tools Available
@@ -96,6 +109,37 @@ The system provides 33 MCP tools including:
 - Workflow management
 
 Access tools at `/mcp/tools` and resources at `/mcp/resources`.
+
+## Deployment Architecture
+
+### Critical: SQLite & Azure Files Incompatibility
+SQLite's file locking is incompatible with Azure Files (SMB/CIFS). The Docker entrypoint implements a sync mechanism:
+1. Database copied from Azure Files to `/tmp/db` on startup
+2. Background sync every 5 minutes back to Azure Files
+3. Sync on shutdown via signal trapping
+4. Set `DATABASE_DIR=/tmp` in container
+
+### GitHub Actions Deployment
+Workflow (`.github/workflows/deploy.yml`):
+1. Builds Docker image → `ghcr.io/madhouselabs/headless-project-management:latest`
+2. Deploys to Azure VM at `pm-instance.khost.dev`
+3. Required secrets: `DOCKER_CA_PEM`, `DOCKER_CERT_PEM`, `DOCKER_KEY_PEM`
+
+## Common Issues & Solutions
+
+### "unable to open database file"
+**Cause**: SQLite file locking incompatibility with network filesystems
+**Solution**: Ensure `DATABASE_DIR` points to local filesystem in container
+
+### Vector search returns no results
+1. Check embeddings: `SELECT COUNT(*) FROM embeddings`
+2. Verify Azure OpenAI credentials
+3. Check logs for "Starting embedding worker"
+
+### GitHub Actions deployment fails
+1. Docker image name must be lowercase
+2. Verify GitHub secrets configured
+3. Check VM accessibility at pm-instance.khost.dev:2376
 
 ## Common Development Tasks
 
@@ -117,7 +161,10 @@ Access tools at `/mcp/tools` and resources at `/mcp/resources`.
 ## Important Notes
 
 - Server runs on `localhost:8080` by default
-- Database stored in `./data/headless_pm.db`
+- Database stored in `./data/db/projects.db` (note: different path in Docker)
 - Uploads stored in `./data/uploads/`
-- JWT auth required for most API endpoints (not MCP)
-- MCP endpoints don't require authentication
+- JWT auth required for API endpoints (`/api/*`)
+- MCP endpoints (`/mcp/*`) require JWT authentication
+- Admin endpoints (`/admin/*`) require admin token
+- Web UI at root paths requires no authentication
+- CGO required for sqlite-vec extension

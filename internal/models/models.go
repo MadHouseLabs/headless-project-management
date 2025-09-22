@@ -48,6 +48,15 @@ const (
 	MilestoneStatusCancelled MilestoneStatus = "cancelled"
 )
 
+type EpicStatus string
+
+const (
+	EpicStatusPlanned   EpicStatus = "planned"
+	EpicStatusActive    EpicStatus = "active"
+	EpicStatusCompleted EpicStatus = "completed"
+	EpicStatusCancelled EpicStatus = "cancelled"
+)
+
 type WorkflowStateType string
 
 const (
@@ -78,6 +87,7 @@ type Task struct {
 	ID              uint         `json:"id" gorm:"primaryKey"`
 	ProjectID       uint         `json:"project_id" gorm:"not null"`
 	ParentID        *uint        `json:"parent_id,omitempty"`
+	EpicID          *uint        `json:"epic_id,omitempty"`
 	MilestoneID     *uint        `json:"milestone_id,omitempty"`
 	SprintID        *uint        `json:"sprint_id,omitempty"`
 	Title           string       `json:"title" gorm:"not null"`
@@ -99,6 +109,7 @@ type Task struct {
 	DeletedAt       *time.Time   `json:"deleted_at" gorm:"index"`
 	Project         *Project     `json:"project,omitempty" gorm:"foreignKey:ProjectID"`
 	Parent          *Task        `json:"parent,omitempty" gorm:"foreignKey:ParentID"`
+	Epic            *Epic        `json:"epic,omitempty" gorm:"foreignKey:EpicID"`
 	Milestone       *Milestone   `json:"milestone,omitempty" gorm:"foreignKey:MilestoneID"`
 	Sprint          *Sprint      `json:"sprint,omitempty" gorm:"foreignKey:SprintID"`
 	AssigneeUser    *User        `json:"assignee_user,omitempty" gorm:"foreignKey:AssigneeID"`
@@ -138,4 +149,20 @@ type Label struct {
 	Name      string `json:"name" gorm:"not null"`
 	Color     string `json:"color"`
 	Tasks     []Task `json:"tasks,omitempty" gorm:"many2many:task_labels;"`
+}
+
+type Epic struct {
+	ID          uint       `json:"id" gorm:"primaryKey"`
+	ProjectID   uint       `json:"project_id" gorm:"not null"`
+	Name        string     `json:"name" gorm:"not null"`
+	Description string     `json:"description"`
+	Status      EpicStatus `json:"status" gorm:"default:'planned'"`
+	StartDate   *time.Time `json:"start_date"`
+	EndDate     *time.Time `json:"end_date"`
+	Progress    int        `json:"progress" gorm:"default:0"`
+	CreatedAt   time.Time  `json:"created_at"`
+	UpdatedAt   time.Time  `json:"updated_at"`
+	DeletedAt   *time.Time `json:"deleted_at" gorm:"index"`
+	Project     *Project   `json:"project,omitempty" gorm:"foreignKey:ProjectID"`
+	Tasks       []Task     `json:"tasks,omitempty" gorm:"foreignKey:EpicID"`
 }

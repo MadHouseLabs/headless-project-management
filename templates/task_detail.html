@@ -7,10 +7,18 @@
     <link rel="stylesheet" href="/static/css/style.iVD6YFX6.css">
 </head>
 <body>
-    <nav>
-        <a href="/">Projects</a>
-        <a href="/{{.ProjectID}}">{{if .Task.Project}}{{.Task.Project.Name}}{{else}}Board{{end}}</a>
-        <span class="muted">/ Task #{{.Task.ID}}</span>
+    <nav style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <a href="/">Projects</a>
+            <span class="muted">/</span>
+            <a href="/{{.ProjectID}}">{{.Task.Project.Name}}</a>
+            <span class="muted">/ Task #{{.Task.ID}}</span>
+        </div>
+        <div>
+            <a href="/{{.ProjectID}}">View Tasks</a>
+            <span class="muted">|</span>
+            <a href="/{{.ProjectID}}/epics">Manage Epics</a>
+        </div>
     </nav>
 
     <header>
