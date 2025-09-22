@@ -65,6 +65,7 @@ func main() {
 	embeddingWorker := service.InitializeEmbeddingWorker(vectorService)
 
 	router := gin.Default()
+	router.RedirectTrailingSlash = false
 	router.Use(cors.Default())
 
 	// Load HTML templates

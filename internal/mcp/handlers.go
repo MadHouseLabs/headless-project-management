@@ -19,7 +19,8 @@ func (s *EnhancedMCPServer) RegisterRoutes(router *gin.RouterGroup) {
 	router.GET("/resources/get", s.handleGetResource)
 	router.POST("/resources/subscribe", s.handleSubscribeResource)
 
-	// MCP Info endpoint
+	// MCP Info endpoint - handle both with and without trailing slash
+	router.GET("", s.handleMCPInfo)
 	router.GET("/", s.handleMCPInfo)
 }
 
