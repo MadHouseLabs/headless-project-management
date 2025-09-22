@@ -96,21 +96,6 @@ func LoadConfig(path string) (*Config, error) {
 	return config, nil
 }
 
-func (c *Config) SaveToFile(path string) error {
-	if path == "" {
-		path = "config.json"
-	}
-
-	file, err := os.Create(path)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	encoder := json.NewEncoder(file)
-	encoder.SetIndent("", "  ")
-	return encoder.Encode(c)
-}
 
 // Helper functions for environment variables
 func getEnv(key, defaultValue string) string {

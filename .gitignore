@@ -20,9 +20,7 @@ data/
 *.db
 uploads/
 
-# Configuration files (except examples)
-config.json
-!config.example.json
+# Environment files
 .env
 !.env.example
 

@@ -48,26 +48,19 @@ go build -o bin/server cmd/server/main.go
 
 ## Configuration
 
-Create a `config.json` file in the project root:
+The application is configured using environment variables. Copy `.env.example` to `.env`:
 
-```json
-{
-  "server": {
-    "host": "localhost",
-    "port": 8080
-  },
-  "database": {
-    "data_dir": "./data"
-  },
-  "storage": {
-    "upload_dir": "./data/uploads"
-  },
-  "mcp": {
-    "enabled": true,
-    "port": 8081
-  }
-}
+```bash
+cp .env.example .env
 ```
+
+Key environment variables:
+- `SERVER_HOST`: Server host (default: localhost)
+- `SERVER_PORT`: Server port (default: 8080)
+- `DATABASE_DIR`: Database directory (default: ./data)
+- `UPLOAD_DIR`: Upload directory (default: ./data/uploads)
+- `MCP_ENABLED`: Enable MCP server (default: true)
+- `ADMIN_API_TOKEN`: Admin token for creating API tokens
 
 ## Running the Server
 
@@ -85,7 +78,7 @@ task --list
 
 ### Manual Run
 ```bash
-./bin/server -config config.json
+./bin/server
 ```
 
 ### Using Docker
@@ -159,7 +152,7 @@ The MCP HTTP endpoints provide the following tools for AI assistants:
 ├── migrations/       # Database migrations
 ├── Taskfile.yml      # Task automation
 ├── Dockerfile        # Container configuration
-└── config.example.json # Example configuration
+└── .env.example      # Example environment variables
 ```
 
 ### Running Tests
