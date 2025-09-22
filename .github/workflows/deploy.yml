@@ -1,0 +1,88 @@
+name: Deploy to Azure VM
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Log in to the Container registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        tags: |
+          type=ref,event=branch
+          type=sha
+          latest
+
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Setup Docker certificates
+      run: |
+        mkdir -p ~/.docker
+        echo "${{ secrets.DOCKER_CA_PEM }}" > ~/.docker/ca.pem
+        echo "${{ secrets.DOCKER_CERT_PEM }}" > ~/.docker/cert.pem
+        echo "${{ secrets.DOCKER_KEY_PEM }}" > ~/.docker/key.pem
+        chmod 600 ~/.docker/key.pem
+
+    - name: Deploy to Azure VM
+      env:
+        DOCKER_HOST: tcp://pm-instance.khost.dev:2376
+        DOCKER_TLS_VERIFY: 1
+        DOCKER_CERT_PATH: /home/runner/.docker
+      run: |
+        # Pull the latest image
+        docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+
+        # Stop and remove existing container
+        docker stop headless-pm || true
+        docker rm headless-pm || true
+
+        # Run new container
+        docker run -d \
+          --name headless-pm \
+          --restart unless-stopped \
+          --network app-network \
+          -v /opt/headless-pm/data:/data \
+          -e SERVER_HOST=0.0.0.0 \
+          -e SERVER_PORT=8080 \
+          -e DATABASE_DIR=/data \
+          -e UPLOAD_DIR=/data/uploads \
+          -e MCP_ENABLED=true \
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+
+        # Clean up old images
+        docker image prune -af --filter "until=24h"

@@ -2,6 +2,7 @@ package database
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 
 	"github.com/headless-pm/headless-project-management/internal/models"
@@ -16,6 +17,12 @@ type Database struct {
 
 func NewDatabase(dataDir string) (*Database, error) {
 	dbPath := filepath.Join(dataDir, "db", "projects.db")
+
+	// Ensure the db directory exists
+	dbDir := filepath.Dir(dbPath)
+	if err := os.MkdirAll(dbDir, 0755); err != nil {
+		return nil, fmt.Errorf("failed to create database directory: %w", err)
+	}
 
 	db, err := gorm.Open(sqlite.Open(dbPath), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Info),
