@@ -68,7 +68,7 @@ jobs:
             az containerapp update \
               --name ${{ env.AZURE_CONTAINER_APP_NAME }} \
               --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-              --image ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest \
+              --image ghcr.io/madhhouselabs/headless-project-management:latest \
               --set-env-vars \
                 "SERVER_HOST=0.0.0.0" \
                 "SERVER_PORT=8080" \
@@ -84,7 +84,7 @@ jobs:
               --name ${{ env.AZURE_CONTAINER_APP_NAME }} \
               --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
               --environment ${{ env.AZURE_CONTAINER_ENV }} \
-              --image ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest \
+              --image ghcr.io/madhhouselabs/headless-project-management:latest \
               --target-port 8080 \
               --ingress external \
               --cpu 0.5 \
