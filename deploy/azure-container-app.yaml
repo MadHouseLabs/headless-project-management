@@ -1,0 +1,55 @@
+properties:
+  managedEnvironmentId: /subscriptions/SUBSCRIPTION_ID/resourceGroups/headless-pm-rg/providers/Microsoft.App/managedEnvironments/headless-pm-env
+  configuration:
+    ingress:
+      external: true
+      targetPort: 8080
+      transport: auto
+      allowInsecure: false
+    registries:
+      - server: ghcr.io
+        username: GITHUB_USER
+        passwordSecretRef: github-token
+    secrets:
+      - name: github-token
+        value: GITHUB_TOKEN
+      - name: admin-api-token
+        value: ADMIN_API_TOKEN
+      - name: azure-openai-key
+        value: AZURE_OPENAI_API_KEY
+  template:
+    containers:
+      - name: headless-pm
+        image: ghcr.io/madhhouselabs/headless-project-management:latest
+        resources:
+          cpu: 0.5
+          memory: 1Gi
+        env:
+          - name: SERVER_HOST
+            value: "0.0.0.0"
+          - name: SERVER_PORT
+            value: "8080"
+          - name: DATABASE_DIR
+            value: "/data/db"
+          - name: UPLOAD_DIR
+            value: "/data/uploads"
+          - name: MCP_ENABLED
+            value: "true"
+          - name: ADMIN_API_TOKEN
+            secretRef: admin-api-token
+          - name: AZURE_OPENAI_ENDPOINT
+            value: "https://klhub-resource.openai.azure.com/"
+          - name: AZURE_OPENAI_API_KEY
+            secretRef: azure-openai-key
+          - name: AZURE_OPENAI_EMBEDDING_DEPLOYMENT
+            value: "embeds"
+        volumeMounts:
+          - volumeName: azure-files-volume
+            mountPath: /data
+    scale:
+      minReplicas: 1
+      maxReplicas: 3
+    volumes:
+      - name: azure-files-volume
+        storageType: AzureFile
+        storageName: headlesspmst
