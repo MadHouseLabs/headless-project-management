@@ -82,6 +82,7 @@ jobs:
           -e DATABASE_DIR=/data \
           -e UPLOAD_DIR=/data/uploads \
           -e MCP_ENABLED=true \
+          -e ADMIN_API_TOKEN=e4Cvk3VipNSzU6vj3liF5nNpg9RBpo3uC3SZDyFegs4= \
           ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
 
         # Clean up old images
