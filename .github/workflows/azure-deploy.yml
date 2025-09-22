@@ -72,43 +72,69 @@ jobs:
         uses: azure/CLI@v1
         with:
           inlineScript: |
-            # Update or create the container app
+            # Create YAML configuration for container app with volume mount
+            cat > container-app-config.yaml << EOF
+            properties:
+              configuration:
+                secrets:
+                - name: admin-api-token
+                  value: "${{ secrets.ADMIN_API_TOKEN }}"
+                - name: azure-openai-key
+                  value: "${{ secrets.AZURE_OPENAI_API_KEY }}"
+                ingress:
+                  external: true
+                  targetPort: 8080
+                  transport: auto
+                  allowInsecure: false
+              template:
+                containers:
+                - name: headless-pm-app
+                  image: ghcr.io/madhouselabs/headless-project-management:latest
+                  resources:
+                    cpu: 0.5
+                    memory: 1Gi
+                  env:
+                  - name: SERVER_HOST
+                    value: "0.0.0.0"
+                  - name: SERVER_PORT
+                    value: "8080"
+                  - name: DATABASE_DIR
+                    value: "/data/db"
+                  - name: UPLOAD_DIR
+                    value: "/data/uploads"
+                  - name: MCP_ENABLED
+                    value: "true"
+                  - name: ADMIN_API_TOKEN
+                    secretRef: admin-api-token
+                  - name: AZURE_OPENAI_ENDPOINT
+                    value: "https://klhub-resource.openai.azure.com/"
+                  - name: AZURE_OPENAI_API_KEY
+                    secretRef: azure-openai-key
+                  - name: AZURE_OPENAI_EMBEDDING_DEPLOYMENT
+                    value: "embeds"
+                  volumeMounts:
+                  - volumeName: azure-files-volume
+                    mountPath: /data
+                scale:
+                  minReplicas: 1
+                  maxReplicas: 3
+                volumes:
+                - name: azure-files-volume
+                  storageType: AzureFile
+                  storageName: azurefiles
+            EOF
+
+            # Update or create the container app with volume mount
             az containerapp update \
               --name ${{ env.AZURE_CONTAINER_APP_NAME }} \
               --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-              --image ghcr.io/madhouselabs/headless-project-management:latest \
-              --set-env-vars \
-                "SERVER_HOST=0.0.0.0" \
-                "SERVER_PORT=8080" \
-                "DATABASE_DIR=/data/db" \
-                "UPLOAD_DIR=/data/uploads" \
-                "MCP_ENABLED=true" \
-                "ADMIN_API_TOKEN=${{ secrets.ADMIN_API_TOKEN }}" \
-                "AZURE_OPENAI_ENDPOINT=https://klhub-resource.openai.azure.com/" \
-                "AZURE_OPENAI_API_KEY=${{ secrets.AZURE_OPENAI_API_KEY }}" \
-                "AZURE_OPENAI_EMBEDDING_DEPLOYMENT=embeds" \
+              --yaml container-app-config.yaml \
               2>/dev/null || \
             az containerapp create \
               --name ${{ env.AZURE_CONTAINER_APP_NAME }} \
               --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
               --environment ${{ env.AZURE_CONTAINER_ENV }} \
-              --image ghcr.io/madhouselabs/headless-project-management:latest \
-              --target-port 8080 \
-              --ingress external \
-              --cpu 0.5 \
-              --memory 1.0Gi \
-              --min-replicas 1 \
-              --max-replicas 3 \
-              --env-vars \
-                "SERVER_HOST=0.0.0.0" \
-                "SERVER_PORT=8080" \
-                "DATABASE_DIR=/data/db" \
-                "UPLOAD_DIR=/data/uploads" \
-                "MCP_ENABLED=true" \
-                "ADMIN_API_TOKEN=${{ secrets.ADMIN_API_TOKEN }}" \
-                "AZURE_OPENAI_ENDPOINT=https://klhub-resource.openai.azure.com/" \
-                "AZURE_OPENAI_API_KEY=${{ secrets.AZURE_OPENAI_API_KEY }}" \
-                "AZURE_OPENAI_EMBEDDING_DEPLOYMENT=embeds"
+              --yaml container-app-config.yaml
 
             # Get the app URL
             echo "Application URL:"
