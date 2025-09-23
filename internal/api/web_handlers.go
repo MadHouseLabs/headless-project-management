@@ -224,16 +224,17 @@ func (h *WebHandler) ProjectBoardPage(c *gin.Context) {
 	var labels []models.Label
 	h.db.DB.Where("project_id = ?", project.ID).Find(&labels)
 
-	// Get unique assignees for this project
-	var assignees []string
-	h.db.DB.Model(&models.Task{}).
-		Where("project_id = ? AND assignee IS NOT NULL AND assignee != ''", project.ID).
-		Distinct("assignee").
-		Pluck("assignee", &assignees)
+	// Get unique assignees for this project (users who have tasks assigned)
+	var assigneeUsers []models.User
+	h.db.DB.Model(&models.User{}).
+		Joins("JOIN tasks ON tasks.assignee_id = users.id").
+		Where("tasks.project_id = ?", project.ID).
+		Distinct("users.id").
+		Find(&assigneeUsers)
 
 	// Get selected filters from query
 	selectedLabelIDs := c.QueryArray("labels")
-	selectedAssignees := c.QueryArray("assignees")
+	selectedAssigneeIDs := c.QueryArray("assignees")
 
 	// Get tasks for this project with filters
 	filters := TaskFilters{
@@ -242,8 +243,8 @@ func (h *WebHandler) ProjectBoardPage(c *gin.Context) {
 		ProjectID: project.ID,
 	}
 
-	// Build query for tasks with labels preloaded
-	query := h.db.DB.Preload("Labels").Where("project_id = ?", project.ID)
+	// Build query for tasks with labels and assignee user preloaded
+	query := h.db.DB.Preload("Labels").Preload("AssigneeUser").Where("project_id = ?", project.ID)
 
 	if filters.Status != "" {
 		query = query.Where("status = ?", filters.Status)
@@ -262,8 +263,8 @@ func (h *WebHandler) ProjectBoardPage(c *gin.Context) {
 	}
 
 	// Filter by assignees if selected
-	if len(selectedAssignees) > 0 {
-		query = query.Where("assignee IN ?", selectedAssignees)
+	if len(selectedAssigneeIDs) > 0 {
+		query = query.Where("assignee_id IN ?", selectedAssigneeIDs)
 	}
 
 	// Get tasks
@@ -354,9 +355,9 @@ func (h *WebHandler) ProjectBoardPage(c *gin.Context) {
 		"TasksByStatus": tasksByStatus,
 		"Project":       project,
 		"Labels":        labels,
-		"Assignees":     assignees,
+		"AssigneeUsers": assigneeUsers,
 		"SelectedLabels": selectedLabelIDs,
-		"SelectedAssignees": selectedAssignees,
+		"SelectedAssigneeIDs": selectedAssigneeIDs,
 		"Filters":       filters,
 		"DependencyCounts": taskDependencyCounts,
 	})
@@ -374,6 +375,7 @@ func (h *WebHandler) TaskDetailPage(c *gin.Context) {
 		Preload("Attachments").
 		Preload("Labels").
 		Preload("Subtasks").
+		Preload("AssigneeUser").
 		First(&task, taskID).Error; err != nil {
 		c.HTML(http.StatusNotFound, "error.html", gin.H{
 			"Error": "Task not found",

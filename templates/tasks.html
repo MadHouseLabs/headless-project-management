@@ -143,7 +143,7 @@
     </div>
 
     <main>
-        {{if or .Labels .Assignees}}
+        {{if or .Labels .AssigneeUsers}}
         <div class="filters-section">
             <form method="get" action="/projects/{{.Project.ID}}/tasks" id="filterForm">
                 <div class="filter-tags">
@@ -155,15 +155,15 @@
                         #{{$label.Name}}
                     </label>
                     {{end}}
-                    {{range $assignee := .Assignees}}
-                    <label class="filter-tag {{range $.SelectedAssignees}}{{if eq . $assignee}}selected{{end}}{{end}}">
-                        <input type="checkbox" name="assignees" value="{{$assignee}}"
-                            {{range $.SelectedAssignees}}{{if eq . $assignee}}checked{{end}}{{end}}
+                    {{range $user := .AssigneeUsers}}
+                    <label class="filter-tag {{range $.SelectedAssigneeIDs}}{{if eq . (printf "%d" $user.ID)}}selected{{end}}{{end}}">
+                        <input type="checkbox" name="assignees" value="{{$user.ID}}"
+                            {{range $.SelectedAssigneeIDs}}{{if eq . (printf "%d" $user.ID)}}checked{{end}}{{end}}
                             onchange="document.getElementById('filterForm').submit()">
-                        @{{$assignee}}
+                        @{{$user.Username}}
                     </label>
                     {{end}}
-                    {{if or .SelectedLabels .SelectedAssignees}}
+                    {{if or .SelectedLabels .SelectedAssigneeIDs}}
                     <a href="/projects/{{.Project.ID}}/tasks" class="filter-clear">Clear all</a>
                     {{end}}
                 </div>
@@ -213,7 +213,7 @@
                                 </div>
                                 {{end}}
                                 <div class="task-footer">
-                                    {{if .Assignee}}<span class="task-assignee">{{.Assignee}}</span>{{end}}
+                                    {{if .AssigneeUser}}<span class="task-assignee">{{.AssigneeUser.Username}}</span>{{else if .Assignee}}<span class="task-assignee">{{.Assignee}}</span>{{end}}
                                     {{if .EstimatedHours}}<span class="task-hours">{{.EstimatedHours}}h</span>{{end}}
                                 </div>
                             </a>
@@ -248,7 +248,7 @@
                                 </div>
                                 {{end}}
                                 <div class="task-footer">
-                                    {{if .Assignee}}<span class="task-assignee">{{.Assignee}}</span>{{end}}
+                                    {{if .AssigneeUser}}<span class="task-assignee">{{.AssigneeUser.Username}}</span>{{else if .Assignee}}<span class="task-assignee">{{.Assignee}}</span>{{end}}
                                     {{if .EstimatedHours}}<span class="task-hours">{{.EstimatedHours}}h</span>{{end}}
                                 </div>
                             </a>
@@ -283,7 +283,7 @@
                                 </div>
                                 {{end}}
                                 <div class="task-footer">
-                                    {{if .Assignee}}<span class="task-assignee">{{.Assignee}}</span>{{end}}
+                                    {{if .AssigneeUser}}<span class="task-assignee">{{.AssigneeUser.Username}}</span>{{else if .Assignee}}<span class="task-assignee">{{.Assignee}}</span>{{end}}
                                     {{if .EstimatedHours}}<span class="task-hours">{{.EstimatedHours}}h</span>{{end}}
                                 </div>
                             </a>
@@ -318,7 +318,7 @@
                                 </div>
                                 {{end}}
                                 <div class="task-footer">
-                                    {{if .Assignee}}<span class="task-assignee">{{.Assignee}}</span>{{end}}
+                                    {{if .AssigneeUser}}<span class="task-assignee">{{.AssigneeUser.Username}}</span>{{else if .Assignee}}<span class="task-assignee">{{.Assignee}}</span>{{end}}
                                     {{if .ActualHours}}<span class="task-hours">{{.ActualHours}}h</span>{{else if .EstimatedHours}}<span class="task-hours">{{.EstimatedHours}}h</span>{{end}}
                                 </div>
                             </a>

@@ -173,7 +173,7 @@
                 </div>
                 <div class="meta-item">
                     <span class="meta-label">Assignee</span>
-                    <span class="meta-value">{{if .Task.Assignee}}{{.Task.Assignee}}{{else}}<span class="muted">Unassigned</span>{{end}}</span>
+                    <span class="meta-value">{{if .Task.AssigneeUser}}{{.Task.AssigneeUser.Username}}{{else if .Task.Assignee}}{{.Task.Assignee}}{{else}}<span class="muted">Unassigned</span>{{end}}</span>
                 </div>
                 {{if .Task.DueDate}}
                 <div class="meta-item">

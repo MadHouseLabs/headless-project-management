@@ -445,7 +445,7 @@ func (db *Database) CreateEpic(epic *models.Epic) error {
 
 func (db *Database) GetEpic(id uint) (*models.Epic, error) {
 	var epic models.Epic
-	err := db.Preload("Project").Preload("Tasks").First(&epic, id).Error
+	err := db.Preload("Project").Preload("Tasks.AssigneeUser").Preload("Tasks.Labels").First(&epic, id).Error
 	if err != nil {
 		return nil, err
 	}
