@@ -83,6 +83,13 @@ func (s *EnhancedMCPServer) getToolHandlers() map[string]func([]byte) (*ToolResp
 		"assign_task":    s.assignTask,
 		"list_assignees": s.listAssignees,
 
+		// Users
+		"create_user": s.createUser,
+		"list_users":  s.listUsers,
+		"get_user":    s.getUserByID,
+		"update_user": s.updateUser,
+		"delete_user": s.deleteUser,
+
 		// Comments
 		"add_comment":   s.addComment,
 		"list_comments": s.listComments,

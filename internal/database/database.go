@@ -764,3 +764,48 @@ func (db *Database) GetProjectDependencyGraph(projectID uint) (map[string]interf
 func (db *Database) RemoveTaskDependency(dependencyID uint) error {
 	return db.Delete(&models.TaskDependency{}, dependencyID).Error
 }
+
+// User management functions
+func (db *Database) CreateUser(user *models.User) error {
+	return db.DB.Create(user).Error
+}
+
+func (db *Database) GetUserByID(id uint) (*models.User, error) {
+	var user models.User
+	if err := db.DB.First(&user, id).Error; err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
+func (db *Database) GetUserByUsername(username string) (*models.User, error) {
+	var user models.User
+	if err := db.DB.Where("username = ?", username).First(&user).Error; err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
+func (db *Database) GetUserByEmail(email string) (*models.User, error) {
+	var user models.User
+	if err := db.DB.Where("email = ?", email).First(&user).Error; err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
+func (db *Database) ListUsers() ([]models.User, error) {
+	var users []models.User
+	if err := db.DB.Find(&users).Error; err != nil {
+		return nil, err
+	}
+	return users, nil
+}
+
+func (db *Database) UpdateUser(user *models.User) error {
+	return db.DB.Save(user).Error
+}
+
+func (db *Database) DeleteUser(id uint) error {
+	return db.DB.Delete(&models.User{}, id).Error
+}

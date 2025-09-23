@@ -281,6 +281,71 @@ func toolDefinitions() []Tool {
 			},
 		},
 
+		// User Management (5 tools)
+		{
+			Name:        "create_user",
+			Description: "Create a new user",
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"username":   map[string]string{"type": "string"},
+					"email":      map[string]string{"type": "string"},
+					"password":   map[string]string{"type": "string"},
+					"first_name": map[string]string{"type": "string"},
+					"last_name":  map[string]string{"type": "string"},
+					"role":       map[string]string{"type": "string", "enum": "admin,member"},
+				},
+				"required": []string{"username", "email", "password"},
+			},
+		},
+		{
+			Name:        "list_users",
+			Description: "List all users",
+			InputSchema: map[string]interface{}{
+				"type":       "object",
+				"properties": map[string]interface{}{},
+			},
+		},
+		{
+			Name:        "get_user",
+			Description: "Get a user by ID",
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"user_id": map[string]string{"type": "number"},
+				},
+				"required": []string{"user_id"},
+			},
+		},
+		{
+			Name:        "update_user",
+			Description: "Update an existing user",
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"user_id":    map[string]string{"type": "number"},
+					"username":   map[string]string{"type": "string"},
+					"email":      map[string]string{"type": "string"},
+					"first_name": map[string]string{"type": "string"},
+					"last_name":  map[string]string{"type": "string"},
+					"role":       map[string]string{"type": "string", "enum": "admin,member"},
+					"is_active":  map[string]string{"type": "boolean"},
+				},
+				"required": []string{"user_id"},
+			},
+		},
+		{
+			Name:        "delete_user",
+			Description: "Delete a user",
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"user_id": map[string]string{"type": "number"},
+				},
+				"required": []string{"user_id"},
+			},
+		},
+
 		// Task Dependencies (7 tools)
 		{
 			Name:        "add_task_dependency",

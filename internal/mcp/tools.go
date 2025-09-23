@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/headless-pm/headless-project-management/internal/models"
+	"github.com/headless-pm/headless-project-management/pkg/auth"
 )
 
 // Project CRUD operations
@@ -525,6 +526,160 @@ func (s *EnhancedMCPServer) listAssignees(args []byte) (*ToolResponse, error) {
 	}
 
 	return SuccessResponse(users), nil
+}
+
+// User management operations
+func (s *EnhancedMCPServer) createUser(args []byte) (*ToolResponse, error) {
+	var input struct {
+		Username  string `json:"username"`
+		Email     string `json:"email"`
+		Password  string `json:"password"`
+		FirstName string `json:"first_name"`
+		LastName  string `json:"last_name"`
+		Role      string `json:"role"`
+	}
+	if err := UnmarshalArgs(args, &input); err != nil {
+		return ErrorResponse(err), nil
+	}
+
+	// Hash password
+	hashedPassword, err := auth.HashPassword(input.Password)
+	if err != nil {
+		return ErrorResponse(fmt.Errorf("failed to hash password: %w", err)), nil
+	}
+
+	// Default role if not specified
+	role := models.UserRoleMember
+	if input.Role != "" {
+		switch input.Role {
+		case "admin":
+			role = models.UserRoleAdmin
+		case "member":
+			role = models.UserRoleMember
+		default:
+			role = models.UserRoleMember
+		}
+	}
+
+	user := &models.User{
+		Username:  input.Username,
+		Email:     input.Email,
+		Password:  hashedPassword,
+		FirstName: input.FirstName,
+		LastName:  input.LastName,
+		Role:      role,
+		IsActive:  true,
+	}
+
+	if err := s.db.CreateUser(user); err != nil {
+		return ErrorResponse(fmt.Errorf("failed to create user: %w", err)), nil
+	}
+
+	// Don't return password in response
+	user.Password = ""
+	return SuccessResponse(user), nil
+}
+
+func (s *EnhancedMCPServer) listUsers(args []byte) (*ToolResponse, error) {
+	users, err := s.db.ListUsers()
+	if err != nil {
+		return ErrorResponse(fmt.Errorf("failed to list users: %w", err)), nil
+	}
+
+	// Remove passwords from response
+	for i := range users {
+		users[i].Password = ""
+	}
+
+	return SuccessResponse(users), nil
+}
+
+func (s *EnhancedMCPServer) getUserByID(args []byte) (*ToolResponse, error) {
+	var input struct {
+		UserID uint `json:"user_id"`
+	}
+	if err := UnmarshalArgs(args, &input); err != nil {
+		return ErrorResponse(err), nil
+	}
+
+	user, err := s.db.GetUserByID(input.UserID)
+	if err != nil {
+		return ErrorResponse(fmt.Errorf("user not found: %w", err)), nil
+	}
+
+	// Don't return password in response
+	user.Password = ""
+	return SuccessResponse(user), nil
+}
+
+func (s *EnhancedMCPServer) updateUser(args []byte) (*ToolResponse, error) {
+	var input struct {
+		UserID    uint   `json:"user_id"`
+		Username  string `json:"username"`
+		Email     string `json:"email"`
+		FirstName string `json:"first_name"`
+		LastName  string `json:"last_name"`
+		Role      string `json:"role"`
+		IsActive  *bool  `json:"is_active"`
+	}
+	if err := UnmarshalArgs(args, &input); err != nil {
+		return ErrorResponse(err), nil
+	}
+
+	user, err := s.db.GetUserByID(input.UserID)
+	if err != nil {
+		return ErrorResponse(fmt.Errorf("user not found: %w", err)), nil
+	}
+
+	// Update fields if provided
+	if input.Username != "" {
+		user.Username = input.Username
+	}
+	if input.Email != "" {
+		user.Email = input.Email
+	}
+	if input.FirstName != "" {
+		user.FirstName = input.FirstName
+	}
+	if input.LastName != "" {
+		user.LastName = input.LastName
+	}
+	if input.Role != "" {
+		switch input.Role {
+		case "admin":
+			user.Role = models.UserRoleAdmin
+		case "member":
+			user.Role = models.UserRoleMember
+		}
+	}
+	if input.IsActive != nil {
+		user.IsActive = *input.IsActive
+	}
+
+	if err := s.db.UpdateUser(user); err != nil {
+		return ErrorResponse(fmt.Errorf("failed to update user: %w", err)), nil
+	}
+
+	// Don't return password in response
+	user.Password = ""
+	return SuccessResponse(user), nil
+}
+
+func (s *EnhancedMCPServer) deleteUser(args []byte) (*ToolResponse, error) {
+	var input struct {
+		UserID uint `json:"user_id"`
+	}
+	if err := UnmarshalArgs(args, &input); err != nil {
+		return ErrorResponse(err), nil
+	}
+
+	if err := s.db.DeleteUser(input.UserID); err != nil {
+		return ErrorResponse(fmt.Errorf("failed to delete user: %w", err)), nil
+	}
+
+	return SuccessResponse(map[string]interface{}{
+		"message": fmt.Sprintf("User %d deleted successfully", input.UserID),
+	}), nil
 }
 
 // Comment operations
