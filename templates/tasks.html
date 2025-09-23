@@ -189,6 +189,19 @@
                             <a href="/projects/{{$.Project.ID}}/tasks/{{.ID}}" class="task {{if eq .Priority "urgent"}}priority-u{{else if eq .Priority "high"}}priority-h{{else if eq .Priority "medium"}}priority-m{{else if eq .Priority "low"}}priority-l{{end}}">
                                 <div class="task-header">
                                     <span class="task-id">#{{.ID}}</span>
+                                    {{$depCount := index $.DependencyCounts .ID}}
+                                    {{if $depCount}}
+                                        {{if gt (index $depCount "dependsOn") 0}}
+                                        <span class="dependency-indicator" title="Depends on {{index $depCount "dependsOn"}} task(s)">
+                                            ← {{index $depCount "dependsOn"}}
+                                        </span>
+                                        {{end}}
+                                        {{if gt (index $depCount "blocking") 0}}
+                                        <span class="dependency-indicator blocking" title="Blocking {{index $depCount "blocking"}} task(s)">
+                                            → {{index $depCount "blocking"}}
+                                        </span>
+                                        {{end}}
+                                    {{end}}
                                     {{if .DueDate}}<span class="task-due">{{.DueDate.Format "Jan 2"}}</span>{{end}}
                                 </div>
                                 <div class="task-title">{{.Title}}</div>
@@ -211,6 +224,19 @@
                             <a href="/projects/{{$.Project.ID}}/tasks/{{.ID}}" class="task {{if eq .Priority "urgent"}}priority-u{{else if eq .Priority "high"}}priority-h{{else if eq .Priority "medium"}}priority-m{{else if eq .Priority "low"}}priority-l{{end}}">
                                 <div class="task-header">
                                     <span class="task-id">#{{.ID}}</span>
+                                    {{$depCount := index $.DependencyCounts .ID}}
+                                    {{if $depCount}}
+                                        {{if gt (index $depCount "dependsOn") 0}}
+                                        <span class="dependency-indicator" title="Depends on {{index $depCount "dependsOn"}} task(s)">
+                                            ← {{index $depCount "dependsOn"}}
+                                        </span>
+                                        {{end}}
+                                        {{if gt (index $depCount "blocking") 0}}
+                                        <span class="dependency-indicator blocking" title="Blocking {{index $depCount "blocking"}} task(s)">
+                                            → {{index $depCount "blocking"}}
+                                        </span>
+                                        {{end}}
+                                    {{end}}
                                     {{if .DueDate}}<span class="task-due">{{.DueDate.Format "Jan 2"}}</span>{{end}}
                                 </div>
                                 <div class="task-title">{{.Title}}</div>
@@ -233,6 +259,19 @@
                             <a href="/projects/{{$.Project.ID}}/tasks/{{.ID}}" class="task {{if eq .Priority "urgent"}}priority-u{{else if eq .Priority "high"}}priority-h{{else if eq .Priority "medium"}}priority-m{{else if eq .Priority "low"}}priority-l{{end}}">
                                 <div class="task-header">
                                     <span class="task-id">#{{.ID}}</span>
+                                    {{$depCount := index $.DependencyCounts .ID}}
+                                    {{if $depCount}}
+                                        {{if gt (index $depCount "dependsOn") 0}}
+                                        <span class="dependency-indicator" title="Depends on {{index $depCount "dependsOn"}} task(s)">
+                                            ← {{index $depCount "dependsOn"}}
+                                        </span>
+                                        {{end}}
+                                        {{if gt (index $depCount "blocking") 0}}
+                                        <span class="dependency-indicator blocking" title="Blocking {{index $depCount "blocking"}} task(s)">
+                                            → {{index $depCount "blocking"}}
+                                        </span>
+                                        {{end}}
+                                    {{end}}
                                     {{if .DueDate}}<span class="task-due">{{.DueDate.Format "Jan 2"}}</span>{{end}}
                                 </div>
                                 <div class="task-title">{{.Title}}</div>
@@ -255,6 +294,19 @@
                             <a href="/projects/{{$.Project.ID}}/tasks/{{.ID}}" class="task done">
                                 <div class="task-header">
                                     <span class="task-id">#{{.ID}}</span>
+                                    {{$depCount := index $.DependencyCounts .ID}}
+                                    {{if $depCount}}
+                                        {{if gt (index $depCount "dependsOn") 0}}
+                                        <span class="dependency-indicator" title="Depends on {{index $depCount "dependsOn"}} task(s)">
+                                            ← {{index $depCount "dependsOn"}}
+                                        </span>
+                                        {{end}}
+                                        {{if gt (index $depCount "blocking") 0}}
+                                        <span class="dependency-indicator blocking" title="Blocking {{index $depCount "blocking"}} task(s)">
+                                            → {{index $depCount "blocking"}}
+                                        </span>
+                                        {{end}}
+                                    {{end}}
                                     {{if .CompletedAt}}<span class="task-completed">{{.CompletedAt.Format "Jan 2"}}</span>{{end}}
                                 </div>
                                 <div class="task-title">{{.Title}}</div>
