@@ -2,6 +2,7 @@ package api
 
 import (
 	"net/http"
+	"sort"
 	"strconv"
 	"time"
 
@@ -302,6 +303,47 @@ func (h *WebHandler) ProjectBoardPage(c *gin.Context) {
 		if _, ok := tasksByStatus[statusStr]; ok {
 			tasksByStatus[statusStr] = append(tasksByStatus[statusStr], task)
 		}
+	}
+
+	// Sort tasks within each status by dependency count (fewer dependencies first)
+	for status := range tasksByStatus {
+		tasks := tasksByStatus[status]
+		sort.Slice(tasks, func(i, j int) bool {
+			// Get dependency counts for both tasks
+			depCountI := 0
+			depCountJ := 0
+
+			if counts, exists := taskDependencyCounts[tasks[i].ID]; exists {
+				depCountI = counts["dependsOn"]
+			}
+			if counts, exists := taskDependencyCounts[tasks[j].ID]; exists {
+				depCountJ = counts["dependsOn"]
+			}
+
+			// Sort by dependency count (ascending - fewer dependencies first)
+			if depCountI != depCountJ {
+				return depCountI < depCountJ
+			}
+
+			// If same dependency count, sort by priority (urgent first)
+			priorityOrder := map[models.TaskPriority]int{
+				models.TaskPriorityUrgent: 0,
+				models.TaskPriorityHigh:   1,
+				models.TaskPriorityMedium: 2,
+				models.TaskPriorityLow:    3,
+			}
+
+			priI := priorityOrder[tasks[i].Priority]
+			priJ := priorityOrder[tasks[j].Priority]
+
+			if priI != priJ {
+				return priI < priJ
+			}
+
+			// Finally, sort by creation date (newer first)
+			return tasks[i].CreatedAt.After(tasks[j].CreatedAt)
+		})
+		tasksByStatus[status] = tasks
 	}
 
 	// Render template
