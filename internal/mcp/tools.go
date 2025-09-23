@@ -536,14 +536,23 @@ func (s *EnhancedMCPServer) addTaskDependency(args []byte) (*ToolResponse, error
 		input.Type = "finish_to_start"
 	}
 
+	// Check for circular dependencies before creating
+	hasCircular, err := s.db.CheckCircularDependency(input.TaskID, input.DependsOnID)
+	if err != nil {
+		return ErrorResponse(fmt.Errorf("failed to check circular dependency: %w", err)), nil
+	}
+	if hasCircular {
+		return ErrorResponse(fmt.Errorf("cannot create dependency: would create a circular dependency chain")), nil
+	}
+
 	dep := &models.TaskDependency{
 		TaskID:      input.TaskID,
 		DependsOnID: input.DependsOnID,
 		Type:        input.Type,
 	}
 
-	if err := s.db.Create(dep).Error; err != nil {
-		return ErrorResponse(err), nil
+	if err := s.db.CreateTaskDependency(dep); err != nil {
+		return ErrorResponse(fmt.Errorf("failed to create dependency: %w", err)), nil
 	}
 
 	return SuccessResponse(dep), nil
@@ -572,12 +581,93 @@ func (s *EnhancedMCPServer) listTaskDependencies(args []byte) (*ToolResponse, er
 		return ErrorResponse(err), nil
 	}
 
-	var deps []models.TaskDependency
-	if err := s.db.Where("task_id = ? OR depends_on_id = ?", input.TaskID, input.TaskID).
-		Preload("Task").Preload("DependsOn").
-		Find(&deps).Error; err != nil {
-		return ErrorResponse(err), nil
+	deps, err := s.db.GetTaskDependencies(input.TaskID)
+	if err != nil {
+		return ErrorResponse(fmt.Errorf("failed to get dependencies: %w", err)), nil
 	}
 
 	return SuccessResponse(deps), nil
+}
+
+// Get the full dependency chain for a task (all transitive dependencies)
+func (s *EnhancedMCPServer) getTaskDependencyChain(args []byte) (*ToolResponse, error) {
+	var input struct {
+		TaskID uint `json:"task_id"`
+	}
+	if err := UnmarshalArgs(args, &input); err != nil {
+		return ErrorResponse(err), nil
+	}
+
+	chain, err := s.db.GetTaskDependencyChain(input.TaskID)
+	if err != nil {
+		return ErrorResponse(fmt.Errorf("failed to get dependency chain: %w", err)), nil
+	}
+
+	return SuccessResponse(chain), nil
+}
+
+// Get tasks that depend on this task
+func (s *EnhancedMCPServer) getTaskDependentChain(args []byte) (*ToolResponse, error) {
+	var input struct {
+		TaskID uint `json:"task_id"`
+	}
+	if err := UnmarshalArgs(args, &input); err != nil {
+		return ErrorResponse(err), nil
+	}
+
+	chain, err := s.db.GetTaskDependentChain(input.TaskID)
+	if err != nil {
+		return ErrorResponse(fmt.Errorf("failed to get dependent chain: %w", err)), nil
+	}
+
+	return SuccessResponse(chain), nil
+}
+
+// Check if a task can start based on its dependencies
+func (s *EnhancedMCPServer) canStartTask(args []byte) (*ToolResponse, error) {
+	var input struct {
+		TaskID uint `json:"task_id"`
+	}
+	if err := UnmarshalArgs(args, &input); err != nil {
+		return ErrorResponse(err), nil
+	}
+
+	canStart, err := s.db.CanStartTask(input.TaskID)
+	if err != nil {
+		return ErrorResponse(fmt.Errorf("failed to check task readiness: %w", err)), nil
+	}
+
+	// Get blocking tasks if can't start
+	var blockingTasks []models.Task
+	if !canStart {
+		deps, _ := s.db.GetTaskDependencies(input.TaskID)
+		for _, dep := range deps {
+			task, _ := s.db.GetTask(dep.DependsOnID)
+			if task != nil && task.Status != models.TaskStatusDone {
+				blockingTasks = append(blockingTasks, *task)
+			}
+		}
+	}
+
+	return SuccessResponse(map[string]interface{}{
+		"can_start":      canStart,
+		"blocking_tasks": blockingTasks,
+	}), nil
+}
+
+// Get the full dependency graph for a project
+func (s *EnhancedMCPServer) getProjectDependencyGraph(args []byte) (*ToolResponse, error) {
+	var input struct {
+		ProjectID uint `json:"project_id"`
+	}
+	if err := UnmarshalArgs(args, &input); err != nil {
+		return ErrorResponse(err), nil
+	}
+
+	graph, err := s.db.GetProjectDependencyGraph(input.ProjectID)
+	if err != nil {
+		return ErrorResponse(fmt.Errorf("failed to get dependency graph: %w", err)), nil
+	}
+
+	return SuccessResponse(graph), nil
 }

@@ -256,5 +256,86 @@ func toolDefinitions() []Tool {
 				"required": []string{"project_id"},
 			},
 		},
+
+		// Task Dependencies (7 tools)
+		{
+			Name:        "add_task_dependency",
+			Description: "Add a dependency between two tasks",
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"task_id":      map[string]string{"type": "number"},
+					"depends_on_id": map[string]string{"type": "number"},
+					"type":         map[string]string{"type": "string"},
+				},
+				"required": []string{"task_id", "depends_on_id"},
+			},
+		},
+		{
+			Name:        "remove_task_dependency",
+			Description: "Remove a task dependency",
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"dependency_id": map[string]string{"type": "number"},
+				},
+				"required": []string{"dependency_id"},
+			},
+		},
+		{
+			Name:        "list_task_dependencies",
+			Description: "List dependencies for a task",
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"task_id": map[string]string{"type": "number"},
+				},
+				"required": []string{"task_id"},
+			},
+		},
+		{
+			Name:        "get_task_dependency_chain",
+			Description: "Get the full dependency chain for a task (all transitive dependencies)",
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"task_id": map[string]string{"type": "number"},
+				},
+				"required": []string{"task_id"},
+			},
+		},
+		{
+			Name:        "get_task_dependent_chain",
+			Description: "Get all tasks that depend on this task",
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"task_id": map[string]string{"type": "number"},
+				},
+				"required": []string{"task_id"},
+			},
+		},
+		{
+			Name:        "can_start_task",
+			Description: "Check if a task can start based on its dependencies",
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"task_id": map[string]string{"type": "number"},
+				},
+				"required": []string{"task_id"},
+			},
+		},
+		{
+			Name:        "get_project_dependency_graph",
+			Description: "Get the full dependency graph for a project",
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"project_id": map[string]string{"type": "number"},
+				},
+				"required": []string{"project_id"},
+			},
+		},
 	}
 }

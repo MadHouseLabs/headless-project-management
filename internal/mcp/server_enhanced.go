@@ -86,8 +86,12 @@ func (s *EnhancedMCPServer) getToolHandlers() map[string]func([]byte) (*ToolResp
 		"list_comments": s.listComments,
 
 		// Task Dependencies
-		"add_task_dependency":    s.addTaskDependency,
-		"remove_task_dependency": s.removeTaskDependency,
-		"list_task_dependencies": s.listTaskDependencies,
+		"add_task_dependency":        s.addTaskDependency,
+		"remove_task_dependency":     s.removeTaskDependency,
+		"list_task_dependencies":     s.listTaskDependencies,
+		"get_task_dependency_chain":  s.getTaskDependencyChain,
+		"get_task_dependent_chain":   s.getTaskDependentChain,
+		"can_start_task":             s.canStartTask,
+		"get_project_dependency_graph": s.getProjectDependencyGraph,
 	}
 }
