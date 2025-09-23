@@ -347,6 +347,32 @@ func toolDefinitions() []Tool {
 			},
 		},
 
+		// Comments/Notes (2 tools)
+		{
+			Name:        "add_comment",
+			Description: "Add a comment/note to a task",
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"task_id": map[string]string{"type": "number"},
+					"content": map[string]string{"type": "string"},
+					"author":  map[string]string{"type": "string"},
+				},
+				"required": []string{"task_id", "content", "author"},
+			},
+		},
+		{
+			Name:        "list_comments",
+			Description: "List all comments/notes for a task",
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"task_id": map[string]string{"type": "number"},
+				},
+				"required": []string{"task_id"},
+			},
+		},
+
 		// Task Dependencies (7 tools)
 		{
 			Name:        "add_task_dependency",
