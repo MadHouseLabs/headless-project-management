@@ -297,6 +297,18 @@ func (h *WebHandler) ProjectBoardPage(c *gin.Context) {
 		return
 	}
 
+	// Filter out done tasks that are older than 2 days
+	twoDaysAgo := time.Now().AddDate(0, 0, -2)
+	var filteredTasks []models.Task
+	for _, task := range tasks {
+		// Keep task if it's not done, or if it's done but completed within the last 2 days
+		if task.Status != models.TaskStatusDone ||
+		   (task.CompletedAt != nil && task.CompletedAt.After(twoDaysAgo)) {
+			filteredTasks = append(filteredTasks, task)
+		}
+	}
+	tasks = filteredTasks
+
 	// Get dependency counts for each task
 	taskDependencyCounts := make(map[uint]map[string]int)
 	for _, task := range tasks {
@@ -390,6 +402,47 @@ func (h *WebHandler) ProjectBoardPage(c *gin.Context) {
 		"SelectedAssigneeIDs": selectedAssigneeIDs,
 		"Filters":       filters,
 		"DependencyCounts": taskDependencyCounts,
+	})
+}
+
+func (h *WebHandler) ArchivedTasksPage(c *gin.Context) {
+	projectIDStr := c.Param("projectId")
+	projectID, err := strconv.ParseUint(projectIDStr, 10, 32)
+	if err != nil {
+		c.HTML(http.StatusBadRequest, "error.html", gin.H{
+			"Error": "Invalid project ID",
+		})
+		return
+	}
+
+	// Get project
+	var project models.Project
+	if err := h.db.DB.First(&project, projectID).Error; err != nil {
+		c.HTML(http.StatusNotFound, "error.html", gin.H{
+			"Error": "Project not found",
+		})
+		return
+	}
+
+	// Get only done tasks that are older than 2 days
+	twoDaysAgo := time.Now().AddDate(0, 0, -2)
+	var archivedTasks []models.Task
+
+	query := h.db.DB.Preload("Labels").Preload("AssigneeUser").
+		Where("project_id = ? AND status = ? AND completed_at < ?",
+			project.ID, models.TaskStatusDone, twoDaysAgo)
+
+	if err := query.Order("completed_at DESC").Find(&archivedTasks).Error; err != nil {
+		c.HTML(http.StatusInternalServerError, "error.html", gin.H{
+			"Error": "Failed to load archived tasks",
+		})
+		return
+	}
+
+	c.HTML(http.StatusOK, "archived_tasks.html", gin.H{
+		"Project": project,
+		"Tasks":   archivedTasks,
+		"ProjectID": projectID,
 	})
 }
 

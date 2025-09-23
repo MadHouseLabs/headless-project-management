@@ -103,6 +103,7 @@ func main() {
 	router.GET("/projects/:projectId/epics", webHandler.EpicsPage)
 	router.GET("/projects/:projectId/epics/:epicId", webHandler.EpicDetailPage)
 	router.GET("/projects/:projectId/tasks/:taskId", webHandler.TaskDetailPage)
+	router.GET("/projects/:projectId/archived", webHandler.ArchivedTasksPage)
 
 	api.SetupExtendedRouter(router, db, vectorService)
 
