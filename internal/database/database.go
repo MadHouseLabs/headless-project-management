@@ -2,8 +2,10 @@ package database
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/headless-pm/headless-project-management/internal/models"
 	"gorm.io/driver/sqlite"
@@ -284,6 +286,56 @@ func (db *Database) ListTasks(projectID *uint, status *models.TaskStatus) ([]mod
 }
 
 func (db *Database) UpdateTask(task *models.Task) error {
+	// Get the old task to check for status changes
+	var oldTask models.Task
+	if err := db.First(&oldTask, task.ID).Error; err == nil {
+		// If task is being marked as done
+		if oldTask.Status != models.TaskStatusDone && task.Status == models.TaskStatusDone {
+			// Set completed_at timestamp
+			now := time.Now()
+			task.CompletedAt = &now
+
+			// Log status change activity
+			userName := "System"
+			if task.UpdatedBy != nil && *task.UpdatedBy > 0 {
+				var user models.User
+				if err := db.First(&user, *task.UpdatedBy).Error; err == nil {
+					userName = user.Username
+				}
+			}
+			_ = db.LogTaskStatusChanged(task.ID, task.UpdatedBy, userName, string(oldTask.Status), string(task.Status))
+
+			// Find and remove all dependencies where other tasks depend on this now-completed task
+			var dependencies []models.TaskDependency
+			if err := db.Where("depends_on_id = ?", task.ID).Find(&dependencies).Error; err == nil {
+				for _, dep := range dependencies {
+					// Log the dependency removal for each affected task
+					var dependentTask models.Task
+					if err := db.First(&dependentTask, dep.TaskID).Error; err == nil {
+						_ = db.LogActivity(dep.TaskID, task.UpdatedBy, userName, "dependency_removed",
+							"dependency", fmt.Sprintf("Task #%d", task.ID), "",
+							fmt.Sprintf("Dependency on task #%d auto-removed (task completed)", task.ID))
+					}
+
+					// Remove the dependency
+					if err := db.Delete(&dep).Error; err != nil {
+						log.Printf("Warning: Failed to remove dependency %d: %v", dep.ID, err)
+					}
+				}
+			}
+		} else if oldTask.Status != task.Status {
+			// Log any other status change
+			userName := "System"
+			if task.UpdatedBy != nil && *task.UpdatedBy > 0 {
+				var user models.User
+				if err := db.First(&user, *task.UpdatedBy).Error; err == nil {
+					userName = user.Username
+				}
+			}
+			_ = db.LogTaskStatusChanged(task.ID, task.UpdatedBy, userName, string(oldTask.Status), string(task.Status))
+		}
+	}
+
 	if err := db.Save(task).Error; err != nil {
 		return err
 	}
