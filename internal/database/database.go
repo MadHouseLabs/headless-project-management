@@ -208,6 +208,12 @@ func (db *Database) DeleteProject(id uint) error {
 		return err
 	}
 
+	// Remove all project_members associations for this project
+	if err := tx.Exec("DELETE FROM project_members WHERE project_id = ?", id).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
 	// Finally, delete the project itself
 	if err := tx.Delete(&models.Project{}, id).Error; err != nil {
 		tx.Rollback()
@@ -306,6 +312,18 @@ func (db *Database) DeleteTask(id uint) error {
 		return err
 	}
 
+	// Remove all task_labels associations for this task
+	if err := tx.Exec("DELETE FROM task_labels WHERE task_id = ?", id).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// Remove all task_watchers associations for this task
+	if err := tx.Exec("DELETE FROM task_watchers WHERE task_id = ?", id).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
 	// Delete all subtasks recursively
 	var subtasks []models.Task
 	if err := tx.Where("parent_id = ?", id).Find(&subtasks).Error; err != nil {
@@ -366,7 +384,25 @@ func (db *Database) UpdateLabel(label *models.Label) error {
 }
 
 func (db *Database) DeleteLabel(id string) error {
-	return db.Delete(&models.Label{}, id).Error
+	// Start a transaction to ensure all deletions happen atomically
+	tx := db.Begin()
+	if tx.Error != nil {
+		return tx.Error
+	}
+
+	// First, remove all task_labels associations for this label
+	if err := tx.Exec("DELETE FROM task_labels WHERE label_id = ?", id).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// Then delete the label itself
+	if err := tx.Delete(&models.Label{}, id).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	return tx.Commit().Error
 }
 
 func (db *Database) GetOrCreateLabel(projectID uint, name string, color string) (*models.Label, error) {
@@ -472,6 +508,11 @@ func (db *Database) UpdateEpic(epic *models.Epic) error {
 }
 
 func (db *Database) DeleteEpic(id uint) error {
+	return db.DeleteEpicWithOptions(id, false)
+}
+
+// DeleteEpicWithOptions deletes an epic with option to cascade delete tasks
+func (db *Database) DeleteEpicWithOptions(id uint, cascadeTasks bool) error {
 	// Start a transaction to ensure all deletions happen atomically
 	tx := db.Begin()
 	if tx.Error != nil {
@@ -483,11 +524,28 @@ func (db *Database) DeleteEpic(id uint) error {
 		}
 	}()
 
-	// Remove epic association from all tasks (set epic_id to null)
-	if err := tx.Model(&models.Task{}).Where("epic_id = ?", id).
-		Update("epic_id", nil).Error; err != nil {
-		tx.Rollback()
-		return err
+	if cascadeTasks {
+		// Delete all tasks associated with this epic
+		var tasks []models.Task
+		if err := tx.Where("epic_id = ?", id).Find(&tasks).Error; err != nil {
+			tx.Rollback()
+			return err
+		}
+
+		// Delete each task using DeleteTask to ensure all related data is cleaned up
+		for _, task := range tasks {
+			if err := db.DeleteTask(task.ID); err != nil {
+				tx.Rollback()
+				return err
+			}
+		}
+	} else {
+		// Remove epic association from all tasks (set epic_id to null)
+		if err := tx.Model(&models.Task{}).Where("epic_id = ?", id).
+			Update("epic_id", nil).Error; err != nil {
+			tx.Rollback()
+			return err
+		}
 	}
 
 	// Delete the epic
@@ -807,5 +865,77 @@ func (db *Database) UpdateUser(user *models.User) error {
 }
 
 func (db *Database) DeleteUser(id uint) error {
-	return db.DB.Delete(&models.User{}, id).Error
+	// Start a transaction to ensure all updates happen atomically
+	tx := db.Begin()
+	if tx.Error != nil {
+		return tx.Error
+	}
+
+	// Remove user from all task assignments (set AssigneeID to NULL)
+	if err := tx.Model(&models.Task{}).Where("assignee_id = ?", id).
+		Updates(map[string]interface{}{"assignee_id": nil, "assignee": ""}).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// Remove user from task watchers
+	if err := tx.Exec("DELETE FROM task_watchers WHERE user_id = ?", id).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// Remove user from project members
+	if err := tx.Exec("DELETE FROM project_members WHERE user_id = ?", id).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// Update tasks where user is creator (we keep the task but set creator to 0)
+	// Note: We don't delete tasks created by the user as they may be important
+	if err := tx.Model(&models.Task{}).Where("created_by = ?", id).
+		Update("created_by", 0).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// Update tasks where user is updater (set to NULL)
+	if err := tx.Model(&models.Task{}).Where("updated_by = ?", id).
+		Update("updated_by", nil).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// Transfer project ownership to system (user_id = 0) for projects owned by this user
+	// Alternatively, you could reject deletion if user owns projects
+	if err := tx.Model(&models.Project{}).Where("owner_id = ?", id).
+		Update("owner_id", 0).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// Delete user sessions
+	if err := tx.Where("user_id = ?", id).Delete(&models.Session{}).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// Delete user refresh tokens
+	if err := tx.Where("user_id = ?", id).Delete(&models.RefreshToken{}).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// Delete user API tokens
+	if err := tx.Where("user_id = ?", id).Delete(&models.APIToken{}).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// Finally, delete the user
+	if err := tx.Delete(&models.User{}, id).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	return tx.Commit().Error
 }

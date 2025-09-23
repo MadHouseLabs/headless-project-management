@@ -335,17 +335,25 @@ func (s *EnhancedMCPServer) updateEpic(args []byte) (*ToolResponse, error) {
 
 func (s *EnhancedMCPServer) deleteEpic(args []byte) (*ToolResponse, error) {
 	var input struct {
-		EpicID uint `json:"epic_id"`
+		EpicID       uint `json:"epic_id"`
+		CascadeTasks bool `json:"cascade_tasks,omitempty"`
 	}
 	if err := UnmarshalArgs(args, &input); err != nil {
 		return ErrorResponse(err), nil
 	}
 
-	if err := s.db.DeleteEpic(input.EpicID); err != nil {
+	// Use the new DeleteEpicWithOptions function
+	if err := s.db.DeleteEpicWithOptions(input.EpicID, input.CascadeTasks); err != nil {
 		return ErrorResponse(fmt.Errorf("failed to delete epic: %w", err)), nil
 	}
 
-	return SuccessResponse(map[string]string{"status": "deleted"}), nil
+	result := map[string]interface{}{
+		"status": "deleted",
+		"epic_id": input.EpicID,
+		"cascade_tasks": input.CascadeTasks,
+	}
+
+	return SuccessResponse(result), nil
 }
 
 func (s *EnhancedMCPServer) listEpics(args []byte) (*ToolResponse, error) {

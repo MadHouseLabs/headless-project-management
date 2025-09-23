@@ -174,11 +174,12 @@ func toolDefinitions() []Tool {
 		},
 		{
 			Name:        "delete_epic",
-			Description: "Delete an epic",
+			Description: "Delete an epic. Optionally cascade delete all tasks associated with the epic",
 			InputSchema: map[string]interface{}{
 				"type": "object",
 				"properties": map[string]interface{}{
-					"epic_id": map[string]string{"type": "number"},
+					"epic_id":       map[string]string{"type": "number", "description": "ID of the epic to delete"},
+					"cascade_tasks": map[string]string{"type": "boolean", "description": "If true, delete all tasks associated with this epic. If false, tasks will have their epic_id set to null"},
 				},
 				"required": []string{"epic_id"},
 			},
