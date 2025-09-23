@@ -167,46 +167,111 @@
             <p class="center muted">{{.CompletedTasks}} of {{.TotalTasks}} tasks completed</p>
         </div>
 
-        <section>
-            <h3>Tasks in This Epic</h3>
+        <section style="margin-top: 2rem;">
+            <h3>Task Board</h3>
             {{if .Epic.Tasks}}
-            <div class="task-grid">
-                {{range .Epic.Tasks}}
-                <a href="/projects/{{$.Project.ID}}/tasks/{{.ID}}" style="text-decoration: none; color: inherit;">
-                    <div class="task-card">
-                        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.5rem;">
-                            <span class="muted" style="font-size: 12px;">#{{.ID}}</span>
-                            <span class="status-{{.Status}}" style="font-size: 11px;">● {{.Status}}</span>
-                        </div>
-                        <div style="font-weight: 500; margin-bottom: 0.5rem;">{{.Title}}</div>
-                        {{if .Description}}
-                        <div class="small muted" style="margin-bottom: 0.5rem;">{{.Description}}</div>
-                        {{end}}
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem;">
-                            <div>
-                                {{if eq .Priority "urgent"}}
-                                    <span style="color: #dc2626; font-size: 11px;">● Urgent</span>
-                                {{else if eq .Priority "high"}}
-                                    <span style="color: #ea580c; font-size: 11px;">● High</span>
-                                {{else if eq .Priority "medium"}}
-                                    <span style="color: #ca8a04; font-size: 11px;">● Medium</span>
-                                {{else}}
-                                    <span style="color: #16a34a; font-size: 11px;">● Low</span>
+            <table class="kanban">
+                <thead>
+                    <tr>
+                        <th>To Do<span class="column-count" style="font-weight: 400; color: #666; margin-left: 0.5rem;">({{len (index .TasksByStatus "todo")}})</span></th>
+                        <th>In Progress<span class="column-count" style="font-weight: 400; color: #666; margin-left: 0.5rem;">({{len (index .TasksByStatus "in_progress")}})</span></th>
+                        <th>In Review<span class="column-count" style="font-weight: 400; color: #666; margin-left: 0.5rem;">({{len (index .TasksByStatus "review")}})</span></th>
+                        <th>Done<span class="column-count" style="font-weight: 400; color: #666; margin-left: 0.5rem;">({{len (index .TasksByStatus "done")}})</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>
+                            {{range (index .TasksByStatus "todo")}}
+                            <a href="/projects/{{$.Project.ID}}/tasks/{{.ID}}" class="task {{if eq .Priority "urgent"}}priority-u{{else if eq .Priority "high"}}priority-h{{else if eq .Priority "medium"}}priority-m{{else if eq .Priority "low"}}priority-l{{end}}">
+                                <div class="task-header">
+                                    <span class="task-id">#{{.ID}}</span>
+                                    {{if .DueDate}}<span class="task-due">{{.DueDate.Format "Jan 2"}}</span>{{end}}
+                                </div>
+                                <div class="task-title">{{.Title}}</div>
+                                {{if .Labels}}
+                                <div class="task-labels">
+                                    {{range .Labels}}
+                                    <span class="task-label" style="color: {{.Color}}">{{.Name}}</span>
+                                    {{end}}
+                                </div>
                                 {{end}}
-                            </div>
-                            <div class="small muted">
-                                {{if .Assignee}}{{.Assignee}}{{else}}Unassigned{{end}}
-                            </div>
-                        </div>
-                        {{if .DueDate}}
-                        <div style="margin-top: 0.5rem; font-size: 11px; color: #666;">
-                            Due: {{.DueDate.Format "Jan 2, 2006"}}
-                        </div>
-                        {{end}}
-                    </div>
-                </a>
-                {{end}}
-            </div>
+                                <div class="task-footer">
+                                    {{if .Assignee}}<span class="task-assignee">{{.Assignee}}</span>{{end}}
+                                    {{if .EstimatedHours}}<span class="task-hours">{{.EstimatedHours}}h</span>{{end}}
+                                </div>
+                            </a>
+                            {{end}}
+                        </td>
+                        <td>
+                            {{range (index .TasksByStatus "in_progress")}}
+                            <a href="/projects/{{$.Project.ID}}/tasks/{{.ID}}" class="task {{if eq .Priority "urgent"}}priority-u{{else if eq .Priority "high"}}priority-h{{else if eq .Priority "medium"}}priority-m{{else if eq .Priority "low"}}priority-l{{end}}">
+                                <div class="task-header">
+                                    <span class="task-id">#{{.ID}}</span>
+                                    {{if .DueDate}}<span class="task-due">{{.DueDate.Format "Jan 2"}}</span>{{end}}
+                                </div>
+                                <div class="task-title">{{.Title}}</div>
+                                {{if .Labels}}
+                                <div class="task-labels">
+                                    {{range .Labels}}
+                                    <span class="task-label" style="color: {{.Color}}">{{.Name}}</span>
+                                    {{end}}
+                                </div>
+                                {{end}}
+                                <div class="task-footer">
+                                    {{if .Assignee}}<span class="task-assignee">{{.Assignee}}</span>{{end}}
+                                    {{if .EstimatedHours}}<span class="task-hours">{{.EstimatedHours}}h</span>{{end}}
+                                </div>
+                            </a>
+                            {{end}}
+                        </td>
+                        <td>
+                            {{range (index .TasksByStatus "review")}}
+                            <a href="/projects/{{$.Project.ID}}/tasks/{{.ID}}" class="task {{if eq .Priority "urgent"}}priority-u{{else if eq .Priority "high"}}priority-h{{else if eq .Priority "medium"}}priority-m{{else if eq .Priority "low"}}priority-l{{end}}">
+                                <div class="task-header">
+                                    <span class="task-id">#{{.ID}}</span>
+                                    {{if .DueDate}}<span class="task-due">{{.DueDate.Format "Jan 2"}}</span>{{end}}
+                                </div>
+                                <div class="task-title">{{.Title}}</div>
+                                {{if .Labels}}
+                                <div class="task-labels">
+                                    {{range .Labels}}
+                                    <span class="task-label" style="color: {{.Color}}">{{.Name}}</span>
+                                    {{end}}
+                                </div>
+                                {{end}}
+                                <div class="task-footer">
+                                    {{if .Assignee}}<span class="task-assignee">{{.Assignee}}</span>{{end}}
+                                    {{if .EstimatedHours}}<span class="task-hours">{{.EstimatedHours}}h</span>{{end}}
+                                </div>
+                            </a>
+                            {{end}}
+                        </td>
+                        <td>
+                            {{range (index .TasksByStatus "done")}}
+                            <a href="/projects/{{$.Project.ID}}/tasks/{{.ID}}" class="task done">
+                                <div class="task-header">
+                                    <span class="task-id">#{{.ID}}</span>
+                                    {{if .CompletedAt}}<span class="task-completed">{{.CompletedAt.Format "Jan 2"}}</span>{{end}}
+                                </div>
+                                <div class="task-title">{{.Title}}</div>
+                                {{if .Labels}}
+                                <div class="task-labels">
+                                    {{range .Labels}}
+                                    <span class="task-label" style="color: {{.Color}}">{{.Name}}</span>
+                                    {{end}}
+                                </div>
+                                {{end}}
+                                <div class="task-footer">
+                                    {{if .Assignee}}<span class="task-assignee">{{.Assignee}}</span>{{end}}
+                                    {{if .ActualHours}}<span class="task-hours">{{.ActualHours}}h</span>{{else if .EstimatedHours}}<span class="task-hours">{{.EstimatedHours}}h</span>{{end}}
+                                </div>
+                            </a>
+                            {{end}}
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
             {{else}}
             <div class="content-box">
                 <p class="center muted">No tasks assigned to this epic yet.</p>

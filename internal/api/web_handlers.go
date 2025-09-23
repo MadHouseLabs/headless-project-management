@@ -563,12 +563,48 @@ func (h *WebHandler) EpicDetailPage(c *gin.Context) {
 		epic.Progress = progress
 	}
 
-	// Calculate task statistics
+	// Calculate task statistics and group by status for Kanban view
 	completedTasks := 0
+	tasksByStatus := map[string][]models.Task{
+		"todo":        []models.Task{},
+		"in_progress": []models.Task{},
+		"review":      []models.Task{},
+		"done":        []models.Task{},
+	}
+
 	for _, task := range epic.Tasks {
 		if task.Status == models.TaskStatusDone {
 			completedTasks++
 		}
+		statusStr := string(task.Status)
+		if _, ok := tasksByStatus[statusStr]; ok {
+			tasksByStatus[statusStr] = append(tasksByStatus[statusStr], task)
+		}
+	}
+
+	// Sort tasks within each status by priority and creation date
+	for status := range tasksByStatus {
+		tasks := tasksByStatus[status]
+		sort.Slice(tasks, func(i, j int) bool {
+			// Sort by priority (urgent first)
+			priorityOrder := map[models.TaskPriority]int{
+				models.TaskPriorityUrgent: 0,
+				models.TaskPriorityHigh:   1,
+				models.TaskPriorityMedium: 2,
+				models.TaskPriorityLow:    3,
+			}
+
+			priI := priorityOrder[tasks[i].Priority]
+			priJ := priorityOrder[tasks[j].Priority]
+
+			if priI != priJ {
+				return priI < priJ
+			}
+
+			// If same priority, sort by creation date (newer first)
+			return tasks[i].CreatedAt.After(tasks[j].CreatedAt)
+		})
+		tasksByStatus[status] = tasks
 	}
 
 	// Render epic detail template
@@ -577,6 +613,7 @@ func (h *WebHandler) EpicDetailPage(c *gin.Context) {
 		"Epic":           epic,
 		"TotalTasks":     len(epic.Tasks),
 		"CompletedTasks": completedTasks,
+		"TasksByStatus":  tasksByStatus,
 	})
 }
 
