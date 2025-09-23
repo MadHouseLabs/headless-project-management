@@ -194,7 +194,7 @@ func toolDefinitions() []Tool {
 			},
 		},
 
-		// Label Management (3 tools)
+		// Label Management (5 tools)
 		{
 			Name:        "create_label",
 			Description: "Create a new label",
@@ -229,6 +229,30 @@ func toolDefinitions() []Tool {
 					"project_id": map[string]string{"type": "number"},
 				},
 				"required": []string{"project_id"},
+			},
+		},
+		{
+			Name:        "update_label",
+			Description: "Update an existing label",
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"label_id": map[string]string{"type": "number"},
+					"name":     map[string]string{"type": "string"},
+					"color":    map[string]string{"type": "string"},
+				},
+				"required": []string{"label_id"},
+			},
+		},
+		{
+			Name:        "delete_label",
+			Description: "Delete a label",
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"label_id": map[string]string{"type": "number"},
+				},
+				"required": []string{"label_id"},
 			},
 		},
 

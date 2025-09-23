@@ -436,6 +436,54 @@ func (s *EnhancedMCPServer) listLabels(args []byte) (*ToolResponse, error) {
 	return SuccessResponse(labels), nil
 }
 
+func (s *EnhancedMCPServer) updateLabel(args []byte) (*ToolResponse, error) {
+	var input struct {
+		LabelID uint   `json:"label_id"`
+		Name    string `json:"name"`
+		Color   string `json:"color"`
+	}
+	if err := UnmarshalArgs(args, &input); err != nil {
+		return ErrorResponse(err), nil
+	}
+
+	// Get the existing label
+	var label models.Label
+	if err := s.db.GetLabelByID(fmt.Sprintf("%d", input.LabelID), &label); err != nil {
+		return ErrorResponse(fmt.Errorf("label not found: %w", err)), nil
+	}
+
+	// Update fields if provided
+	if input.Name != "" {
+		label.Name = input.Name
+	}
+	if input.Color != "" {
+		label.Color = input.Color
+	}
+
+	if err := s.db.UpdateLabel(&label); err != nil {
+		return ErrorResponse(fmt.Errorf("failed to update label: %w", err)), nil
+	}
+
+	return SuccessResponse(label), nil
+}
+
+func (s *EnhancedMCPServer) deleteLabel(args []byte) (*ToolResponse, error) {
+	var input struct {
+		LabelID uint `json:"label_id"`
+	}
+	if err := UnmarshalArgs(args, &input); err != nil {
+		return ErrorResponse(err), nil
+	}
+
+	if err := s.db.DeleteLabel(fmt.Sprintf("%d", input.LabelID)); err != nil {
+		return ErrorResponse(fmt.Errorf("failed to delete label: %w", err)), nil
+	}
+
+	return SuccessResponse(map[string]interface{}{
+		"message": fmt.Sprintf("Label %d deleted successfully", input.LabelID),
+	}), nil
+}
+
 // Assignee operations
 func (s *EnhancedMCPServer) assignTask(args []byte) (*ToolResponse, error) {
 	var input struct {

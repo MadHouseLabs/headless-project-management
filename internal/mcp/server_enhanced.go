@@ -76,6 +76,8 @@ func (s *EnhancedMCPServer) getToolHandlers() map[string]func([]byte) (*ToolResp
 		"create_label": s.createLabel,
 		"assign_label": s.assignLabel,
 		"list_labels":  s.listLabels,
+		"update_label": s.updateLabel,
+		"delete_label": s.deleteLabel,
 
 		// Assignees
 		"assign_task":    s.assignTask,
