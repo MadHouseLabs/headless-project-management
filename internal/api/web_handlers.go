@@ -300,11 +300,15 @@ func (h *WebHandler) ProjectBoardPage(c *gin.Context) {
 	// Filter out done tasks that are older than 2 days
 	twoDaysAgo := time.Now().AddDate(0, 0, -2)
 	var filteredTasks []models.Task
+	var archivedCount int
 	for _, task := range tasks {
 		// Keep task if it's not done, or if it's done but completed within the last 2 days
 		if task.Status != models.TaskStatusDone ||
 		   (task.CompletedAt != nil && task.CompletedAt.After(twoDaysAgo)) {
 			filteredTasks = append(filteredTasks, task)
+		} else {
+			// Count archived tasks (done and older than 2 days)
+			archivedCount++
 		}
 	}
 	tasks = filteredTasks
@@ -360,17 +364,25 @@ func (h *WebHandler) ProjectBoardPage(c *gin.Context) {
 				blockingCountJ = counts["blocking"]
 			}
 
-			// First priority: Tasks that are blocking more tasks (descending - more blocking first)
+			// First priority: Tasks with no dependencies (these can be started immediately)
+			if depCountI == 0 && depCountJ > 0 {
+				return true
+			}
+			if depCountJ == 0 && depCountI > 0 {
+				return false
+			}
+
+			// Second priority: Tasks that are blocking more tasks (descending - more blocking first)
 			if blockingCountI != blockingCountJ {
 				return blockingCountI > blockingCountJ
 			}
 
-			// Second priority: Tasks with fewer dependencies (ascending - fewer dependencies first)
+			// Third priority: Among remaining tasks, those with fewer dependencies first
 			if depCountI != depCountJ {
 				return depCountI < depCountJ
 			}
 
-			// Third priority: Sort by priority (urgent first)
+			// Fourth priority: Sort by priority (urgent first)
 			priorityOrder := map[models.TaskPriority]int{
 				models.TaskPriorityUrgent: 0,
 				models.TaskPriorityHigh:   1,
@@ -402,6 +414,8 @@ func (h *WebHandler) ProjectBoardPage(c *gin.Context) {
 		"SelectedAssigneeIDs": selectedAssigneeIDs,
 		"Filters":       filters,
 		"DependencyCounts": taskDependencyCounts,
+		"ArchivedCount": archivedCount,
+		"ProjectID":     projectID,
 	})
 }
 

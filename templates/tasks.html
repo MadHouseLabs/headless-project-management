@@ -140,7 +140,6 @@
         <a href="/projects/{{.Project.ID}}" class="tab">Overview</a>
         <a href="/projects/{{.Project.ID}}/tasks" class="tab active">Tasks</a>
         <a href="/projects/{{.Project.ID}}/epics" class="tab">Epics</a>
-        <a href="/projects/{{.Project.ID}}/archived" class="tab">Archived</a>
     </div>
 
     <main>
@@ -321,6 +320,15 @@
                                 <div class="task-footer">
                                     {{if .AssigneeUser}}<span class="task-assignee">{{.AssigneeUser.Username}}</span>{{end}}
                                     {{if .ActualHours}}<span class="task-hours">{{.ActualHours}}h</span>{{else if .EstimatedHours}}<span class="task-hours">{{.EstimatedHours}}h</span>{{end}}
+                                </div>
+                            </a>
+                            {{end}}
+                            {{if gt .ArchivedCount 0}}
+                            <a href="/projects/{{.ProjectID}}/archived" class="archived-link">
+                                <div style="background: #f3f4f6; padding: 0.75rem; margin-top: 0.5rem; border-radius: 6px; text-align: center; border: 1px solid #e5e7eb;">
+                                    <span style="color: #6b7280; font-size: 13px; font-weight: 500;">
+                                        View {{.ArchivedCount}} Archived {{if eq .ArchivedCount 1}}Task{{else}}Tasks{{end}} →
+                                    </span>
                                 </div>
                             </a>
                             {{end}}

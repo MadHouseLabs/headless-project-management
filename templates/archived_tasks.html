@@ -122,19 +122,12 @@
     </div>
 
     <header>
-        <h1>{{.Project.Name}}</h1>
-        <p>
-            <span class="status-{{.Project.Status}}">● {{.Project.Status}}</span>
-            <span class="muted">• Archived Tasks</span>
-        </p>
+        <a href="/projects/{{.ProjectID}}/tasks" style="color: #666; text-decoration: none; font-size: 14px; margin-bottom: 1rem; display: inline-block;">
+            ← Back to Task Board
+        </a>
+        <h1>Archived Tasks - {{.Project.Name}}</h1>
     </header>
 
-    <div class="tabs">
-        <a href="/projects/{{.ProjectID}}" class="tab">Overview</a>
-        <a href="/projects/{{.ProjectID}}/tasks" class="tab">Tasks</a>
-        <a href="/projects/{{.ProjectID}}/epics" class="tab">Epics</a>
-        <a href="/projects/{{.ProjectID}}/archived" class="tab active">Archived</a>
-    </div>
 
     <main>
         <div class="archived-header">
