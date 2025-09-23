@@ -1,18 +1,38 @@
 package api
 
 import (
+	"html/template"
 	"net/http"
 	"sort"
 	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gomarkdown/markdown"
+	"github.com/gomarkdown/markdown/html"
+	"github.com/gomarkdown/markdown/parser"
 	"github.com/headless-pm/headless-project-management/internal/database"
 	"github.com/headless-pm/headless-project-management/internal/models"
 )
 
 type WebHandler struct {
 	db *database.Database
+}
+
+// RenderMarkdown converts markdown text to HTML
+func RenderMarkdown(md string) template.HTML {
+	// Create markdown parser with extensions
+	extensions := parser.CommonExtensions | parser.AutoHeadingIDs | parser.NoEmptyLineBeforeBlock
+	p := parser.NewWithExtensions(extensions)
+	doc := p.Parse([]byte(md))
+
+	// Create HTML renderer with options
+	htmlFlags := html.CommonFlags | html.HrefTargetBlank
+	opts := html.RendererOptions{Flags: htmlFlags}
+	renderer := html.NewRenderer(opts)
+
+	htmlContent := markdown.Render(doc, renderer)
+	return template.HTML(htmlContent)
 }
 
 type TaskPageData struct {
@@ -411,13 +431,20 @@ func (h *WebHandler) TaskDetailPage(c *gin.Context) {
 	// Get task activities (audit trail)
 	activities, _ := h.db.GetTaskActivities(task.ID)
 
+	// Render markdown description
+	var renderedDescription template.HTML
+	if task.Description != "" {
+		renderedDescription = RenderMarkdown(task.Description)
+	}
+
 	// Render task detail template
 	c.HTML(http.StatusOK, "task_detail.html", gin.H{
-		"Task":           task,
-		"ProjectID":      projectID,
-		"DependsOnTasks": dependsOnTasks,    // Tasks this task depends on
-		"DependentTasks": dependentTasks,    // Tasks that depend on this task
-		"Activities":     activities,        // Activity timeline
+		"Task":                task,
+		"ProjectID":           projectID,
+		"RenderedDescription": renderedDescription,  // Markdown-rendered description
+		"DependsOnTasks":      dependsOnTasks,       // Tasks this task depends on
+		"DependentTasks":      dependentTasks,       // Tasks that depend on this task
+		"Activities":          activities,           // Activity timeline
 	})
 }
 
