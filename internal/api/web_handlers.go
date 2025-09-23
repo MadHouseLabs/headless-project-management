@@ -227,9 +227,10 @@ func (h *WebHandler) ProjectBoardPage(c *gin.Context) {
 	// Get unique assignees for this project (users who have tasks assigned)
 	var assigneeUsers []models.User
 	h.db.DB.Model(&models.User{}).
+		Select("users.*").
 		Joins("JOIN tasks ON tasks.assignee_id = users.id").
 		Where("tasks.project_id = ?", project.ID).
-		Distinct("users.id").
+		Group("users.id").
 		Find(&assigneeUsers)
 
 	// Get selected filters from query
