@@ -329,27 +329,36 @@ func (h *WebHandler) ProjectBoardPage(c *gin.Context) {
 		}
 	}
 
-	// Sort tasks within each status by dependency count (fewer dependencies first)
+	// Sort tasks within each status by blocking importance and dependencies
 	for status := range tasksByStatus {
 		tasks := tasksByStatus[status]
 		sort.Slice(tasks, func(i, j int) bool {
-			// Get dependency counts for both tasks
+			// Get dependency and blocking counts for both tasks
 			depCountI := 0
 			depCountJ := 0
+			blockingCountI := 0
+			blockingCountJ := 0
 
 			if counts, exists := taskDependencyCounts[tasks[i].ID]; exists {
 				depCountI = counts["dependsOn"]
+				blockingCountI = counts["blocking"]
 			}
 			if counts, exists := taskDependencyCounts[tasks[j].ID]; exists {
 				depCountJ = counts["dependsOn"]
+				blockingCountJ = counts["blocking"]
 			}
 
-			// Sort by dependency count (ascending - fewer dependencies first)
+			// First priority: Tasks that are blocking more tasks (descending - more blocking first)
+			if blockingCountI != blockingCountJ {
+				return blockingCountI > blockingCountJ
+			}
+
+			// Second priority: Tasks with fewer dependencies (ascending - fewer dependencies first)
 			if depCountI != depCountJ {
 				return depCountI < depCountJ
 			}
 
-			// If same dependency count, sort by priority (urgent first)
+			// Third priority: Sort by priority (urgent first)
 			priorityOrder := map[models.TaskPriority]int{
 				models.TaskPriorityUrgent: 0,
 				models.TaskPriorityHigh:   1,
