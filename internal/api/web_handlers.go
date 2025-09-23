@@ -252,11 +252,13 @@ func (h *WebHandler) ProjectBoardPage(c *gin.Context) {
 		query = query.Where("priority = ?", filters.Priority)
 	}
 
-	// Filter by labels if selected
+	// Filter by labels if selected - require ALL selected labels (AND logic)
 	if len(selectedLabelIDs) > 0 {
-		query = query.Joins("JOIN task_labels ON task_labels.task_id = tasks.id").
-			Where("task_labels.label_id IN ?", selectedLabelIDs).
-			Group("tasks.id")
+		// For AND logic: task must have ALL selected labels
+		// We need to join and check for each label
+		for _, labelID := range selectedLabelIDs {
+			query = query.Where("EXISTS (SELECT 1 FROM task_labels WHERE task_labels.task_id = tasks.id AND task_labels.label_id = ?)", labelID)
+		}
 	}
 
 	// Filter by assignees if selected
