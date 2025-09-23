@@ -119,7 +119,67 @@ func (db *Database) UpdateProject(project *models.Project) error {
 }
 
 func (db *Database) DeleteProject(id uint) error {
-	return db.Delete(&models.Project{}, id).Error
+	// Start a transaction to ensure all deletions happen atomically
+	tx := db.Begin()
+	if tx.Error != nil {
+		return tx.Error
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	// Delete all task dependencies for tasks in this project
+	if err := tx.Exec(`
+		DELETE FROM task_dependencies
+		WHERE task_id IN (SELECT id FROM tasks WHERE project_id = ?)
+		OR depends_on_id IN (SELECT id FROM tasks WHERE project_id = ?)
+	`, id, id).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// Delete all comments for tasks in this project
+	if err := tx.Where("task_id IN (SELECT id FROM tasks WHERE project_id = ?)", id).
+		Delete(&models.Comment{}).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// Delete all attachments for tasks in this project
+	if err := tx.Where("task_id IN (SELECT id FROM tasks WHERE project_id = ?)", id).
+		Delete(&models.Attachment{}).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// Delete all tasks (including subtasks) for this project
+	if err := tx.Where("project_id = ?", id).Delete(&models.Task{}).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// Delete all epics for this project
+	if err := tx.Where("project_id = ?", id).Delete(&models.Epic{}).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// Delete all labels for this project
+	if err := tx.Where("project_id = ?", id).Delete(&models.Label{}).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// Finally, delete the project itself
+	if err := tx.Delete(&models.Project{}, id).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// Commit the transaction
+	return tx.Commit().Error
 }
 
 func (db *Database) CreateTask(task *models.Task) error {
@@ -180,7 +240,59 @@ func (db *Database) UpdateTask(task *models.Task) error {
 }
 
 func (db *Database) DeleteTask(id uint) error {
-	return db.Delete(&models.Task{}, id).Error
+	// Start a transaction to ensure all deletions happen atomically
+	tx := db.Begin()
+	if tx.Error != nil {
+		return tx.Error
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	// Delete all task dependencies where this task is involved
+	if err := tx.Where("task_id = ? OR depends_on_id = ?", id, id).
+		Delete(&models.TaskDependency{}).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// Delete all comments for this task
+	if err := tx.Where("task_id = ?", id).Delete(&models.Comment{}).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// Delete all attachments for this task
+	if err := tx.Where("task_id = ?", id).Delete(&models.Attachment{}).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// Delete all subtasks recursively
+	var subtasks []models.Task
+	if err := tx.Where("parent_id = ?", id).Find(&subtasks).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	for _, subtask := range subtasks {
+		// Recursively delete each subtask
+		if err := db.DeleteTask(subtask.ID); err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+
+	// Finally, delete the task itself
+	if err := tx.Delete(&models.Task{}, id).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// Commit the transaction
+	return tx.Commit().Error
 }
 
 func (db *Database) AddComment(comment *models.Comment) error {
@@ -324,7 +436,32 @@ func (db *Database) UpdateEpic(epic *models.Epic) error {
 }
 
 func (db *Database) DeleteEpic(id uint) error {
-	return db.Delete(&models.Epic{}, id).Error
+	// Start a transaction to ensure all deletions happen atomically
+	tx := db.Begin()
+	if tx.Error != nil {
+		return tx.Error
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	// Remove epic association from all tasks (set epic_id to null)
+	if err := tx.Model(&models.Task{}).Where("epic_id = ?", id).
+		Update("epic_id", nil).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// Delete the epic
+	if err := tx.Delete(&models.Epic{}, id).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// Commit the transaction
+	return tx.Commit().Error
 }
 
 func (db *Database) GetEpicsByProject(projectID uint) ([]models.Epic, error) {
