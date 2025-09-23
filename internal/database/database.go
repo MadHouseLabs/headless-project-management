@@ -32,13 +32,13 @@ func NewDatabase(dataDir string) (*Database, error) {
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
 
+	// Migrate all models except TaskDependency first
 	if err := db.AutoMigrate(
 		// Core entities
 		&models.User{},
 		&models.Project{},
 		&models.Epic{},
 		&models.Task{},
-		&models.TaskDependency{},
 		&models.Label{},
 		&models.Comment{},
 		&models.Attachment{},
@@ -55,6 +55,18 @@ func NewDatabase(dataDir string) (*Database, error) {
 		&models.DocumentEmbedding{},
 	); err != nil {
 		return nil, fmt.Errorf("failed to migrate database: %w", err)
+	}
+
+	// Handle TaskDependency migration separately due to potential schema issues
+	// Check if table exists and has the correct structure
+	var tableExists int
+	db.Raw("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='task_dependencies'").Scan(&tableExists)
+
+	if tableExists == 0 {
+		// Create the table if it doesn't exist
+		if err := db.AutoMigrate(&models.TaskDependency{}); err != nil {
+			return nil, fmt.Errorf("failed to create task_dependencies table: %w", err)
+		}
 	}
 
 	// Fix column name for task_dependencies if needed
