@@ -100,6 +100,34 @@
             justify-content: space-between;
             margin-bottom: 0.5rem;
         }
+        .status-badge-todo {
+            background: #f3f4f6;
+            color: #6b7280;
+        }
+        .status-badge-in_progress {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+        .status-badge-review {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        .status-badge-done {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        .status-todo {
+            color: #6b7280;
+        }
+        .status-in_progress {
+            color: #2563eb;
+        }
+        .status-review {
+            color: #f59e0b;
+        }
+        .status-done {
+            color: #10b981;
+        }
     </style>
 </head>
 <body>
@@ -167,6 +195,49 @@
             <h3>Description</h3>
             <div class="description-section">
                 {{.Task.Description}}
+            </div>
+        </section>
+        {{end}}
+
+        {{if or .DependsOnTasks .DependentTasks}}
+        <section style="margin-bottom: 2rem;">
+            <h3>Dependencies</h3>
+            <div class="details-grid">
+                {{if .DependsOnTasks}}
+                <div class="detail-box">
+                    <h4 style="margin-top: 0; font-size: 13px; text-transform: uppercase; color: #666;">Depends On</h4>
+                    <p style="font-size: 12px; color: #888; margin-bottom: 1rem;">This task cannot start until these tasks are completed:</p>
+                    {{range .DependsOnTasks}}
+                    <div style="padding: 0.5rem 0; border-bottom: 1px solid #f0f0f0;">
+                        <a href="/projects/{{$.ProjectID}}/tasks/{{.ID}}" style="text-decoration: none; color: inherit;">
+                            <span class="status-{{.Status}}" style="font-size: 12px;">
+                                {{if eq .Status "done"}}✓{{else if eq .Status "in_progress"}}◐{{else}}○{{end}}
+                            </span>
+                            <span style="font-weight: 500;">#{{.ID}}</span> {{.Title}}
+                            <span class="status-badge-{{.Status}}" style="float: right; font-size: 11px; padding: 2px 6px; border-radius: 3px;">{{.Status}}</span>
+                        </a>
+                    </div>
+                    {{end}}
+                </div>
+                {{end}}
+
+                {{if .DependentTasks}}
+                <div class="detail-box">
+                    <h4 style="margin-top: 0; font-size: 13px; text-transform: uppercase; color: #666;">Blocking</h4>
+                    <p style="font-size: 12px; color: #888; margin-bottom: 1rem;">These tasks are waiting for this task to complete:</p>
+                    {{range .DependentTasks}}
+                    <div style="padding: 0.5rem 0; border-bottom: 1px solid #f0f0f0;">
+                        <a href="/projects/{{$.ProjectID}}/tasks/{{.ID}}" style="text-decoration: none; color: inherit;">
+                            <span class="status-{{.Status}}" style="font-size: 12px;">
+                                {{if eq .Status "done"}}✓{{else if eq .Status "in_progress"}}◐{{else}}○{{end}}
+                            </span>
+                            <span style="font-weight: 500;">#{{.ID}}</span> {{.Title}}
+                            <span class="status-badge-{{.Status}}" style="float: right; font-size: 11px; padding: 2px 6px; border-radius: 3px;">{{.Status}}</span>
+                        </a>
+                    </div>
+                    {{end}}
+                </div>
+                {{end}}
             </div>
         </section>
         {{end}}

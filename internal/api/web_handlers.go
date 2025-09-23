@@ -272,6 +272,23 @@ func (h *WebHandler) ProjectBoardPage(c *gin.Context) {
 		return
 	}
 
+	// Get dependency counts for each task
+	taskDependencyCounts := make(map[uint]map[string]int)
+	for _, task := range tasks {
+		// Count dependencies
+		var dependsOnCount int64
+		h.db.DB.Model(&models.TaskDependency{}).Where("task_id = ?", task.ID).Count(&dependsOnCount)
+
+		// Count dependent tasks
+		var blockingCount int64
+		h.db.DB.Model(&models.TaskDependency{}).Where("depends_on_id = ?", task.ID).Count(&blockingCount)
+
+		taskDependencyCounts[task.ID] = map[string]int{
+			"dependsOn": int(dependsOnCount),
+			"blocking":  int(blockingCount),
+		}
+	}
+
 	// Group tasks by status for Kanban view
 	tasksByStatus := map[string][]models.Task{
 		"todo":        []models.Task{},
@@ -297,6 +314,7 @@ func (h *WebHandler) ProjectBoardPage(c *gin.Context) {
 		"SelectedLabels": selectedLabelIDs,
 		"SelectedAssignees": selectedAssignees,
 		"Filters":       filters,
+		"DependencyCounts": taskDependencyCounts,
 	})
 }
 
@@ -319,10 +337,34 @@ func (h *WebHandler) TaskDetailPage(c *gin.Context) {
 		return
 	}
 
+	// Get task dependencies (tasks this task depends on)
+	dependencies, _ := h.db.GetTaskDependencies(task.ID)
+	var dependsOnTasks []models.Task
+	for _, dep := range dependencies {
+		var depTask models.Task
+		if err := h.db.DB.First(&depTask, dep.DependsOnID).Error; err == nil {
+			dependsOnTasks = append(dependsOnTasks, depTask)
+		}
+	}
+
+	// Get dependent tasks (tasks that depend on this task)
+	var dependentTasks []models.Task
+	var dependents []models.TaskDependency
+	if err := h.db.DB.Where("depends_on_id = ?", task.ID).Find(&dependents).Error; err == nil {
+		for _, dep := range dependents {
+			var depTask models.Task
+			if err := h.db.DB.First(&depTask, dep.TaskID).Error; err == nil {
+				dependentTasks = append(dependentTasks, depTask)
+			}
+		}
+	}
+
 	// Render task detail template
 	c.HTML(http.StatusOK, "task_detail.html", gin.H{
-		"Task":      task,
-		"ProjectID": projectID,
+		"Task":           task,
+		"ProjectID":      projectID,
+		"DependsOnTasks": dependsOnTasks,    // Tasks this task depends on
+		"DependentTasks": dependentTasks,    // Tasks that depend on this task
 	})
 }
 

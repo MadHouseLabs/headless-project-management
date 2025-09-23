@@ -571,3 +571,111 @@ func (h *Handler) getProjectIDFromParam(c *gin.Context) (uint, error) {
 	return project.ID, nil
 }
 
+// GetTaskDependencies returns dependencies for a task
+func (h *Handler) GetTaskDependencies(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid task ID"})
+		return
+	}
+
+	// Get direct dependencies
+	dependencies, err := h.db.GetTaskDependencies(uint(id))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get dependencies"})
+		return
+	}
+
+	// Get dependent tasks (tasks that depend on this task)
+	var dependents []models.TaskDependency
+	if err := h.db.Where("depends_on_id = ?", id).Preload("Task").Find(&dependents).Error; err == nil {
+		// Include dependents in response
+		c.JSON(http.StatusOK, gin.H{
+			"dependencies": dependencies,  // Tasks this task depends on
+			"dependents":   dependents,     // Tasks that depend on this task
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"dependencies": dependencies,
+		"dependents":   []models.TaskDependency{},
+	})
+}
+
+// AddTaskDependency creates a new task dependency
+func (h *Handler) AddTaskDependency(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid task ID"})
+		return
+	}
+
+	var input struct {
+		DependsOnID uint   `json:"depends_on_id" binding:"required"`
+		Type        string `json:"type"`
+	}
+
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if input.Type == "" {
+		input.Type = "finish_to_start"
+	}
+
+	// Check for circular dependency
+	hasCircular, err := h.db.CheckCircularDependency(uint(id), input.DependsOnID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check dependencies"})
+		return
+	}
+	if hasCircular {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Cannot create dependency: would create a circular dependency"})
+		return
+	}
+
+	dependency := &models.TaskDependency{
+		TaskID:      uint(id),
+		DependsOnID: input.DependsOnID,
+		Type:        input.Type,
+	}
+
+	if err := h.db.CreateTaskDependency(dependency); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create dependency"})
+		return
+	}
+
+	c.JSON(http.StatusCreated, dependency)
+}
+
+// RemoveTaskDependency removes a task dependency
+func (h *Handler) RemoveTaskDependency(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid task ID"})
+		return
+	}
+
+	depID, err := strconv.ParseUint(c.Param("dep_id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid dependency ID"})
+		return
+	}
+
+	// Verify the dependency belongs to this task
+	var dep models.TaskDependency
+	if err := h.db.Where("id = ? AND task_id = ?", depID, id).First(&dep).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Dependency not found"})
+		return
+	}
+
+	if err := h.db.RemoveTaskDependency(uint(depID)); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to remove dependency"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Dependency removed"})
+}
+

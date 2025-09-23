@@ -167,6 +167,9 @@ func main() {
 			tasks.DELETE("/:id", apiHandler.DeleteTask)
 			tasks.POST("/:id/comments", apiHandler.AddComment)
 			tasks.POST("/:id/attachments", apiHandler.UploadAttachment)
+			tasks.GET("/:id/dependencies", apiHandler.GetTaskDependencies)
+			tasks.POST("/:id/dependencies", apiHandler.AddTaskDependency)
+			tasks.DELETE("/:id/dependencies/:dep_id", apiHandler.RemoveTaskDependency)
 		}
 	}
 
