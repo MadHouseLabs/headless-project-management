@@ -57,6 +57,30 @@ func NewDatabase(dataDir string) (*Database, error) {
 		return nil, fmt.Errorf("failed to migrate database: %w", err)
 	}
 
+	// Fix column name for task_dependencies if needed
+	// Check if the old column name exists and rename it
+	var columnExists int
+	db.Raw("SELECT COUNT(*) FROM pragma_table_info('task_dependencies') WHERE name = 'depends_on_task_id'").Scan(&columnExists)
+	if columnExists > 0 {
+		// Rename the column from depends_on_task_id to depends_on_id
+		if err := db.Exec("ALTER TABLE task_dependencies RENAME COLUMN depends_on_task_id TO depends_on_id").Error; err != nil {
+			// SQLite doesn't support RENAME COLUMN in older versions, need to recreate the table
+			db.Exec("BEGIN TRANSACTION")
+			db.Exec(`CREATE TABLE task_dependencies_new (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				task_id INTEGER NOT NULL,
+				depends_on_id INTEGER NOT NULL,
+				type TEXT DEFAULT 'finish_to_start',
+				CONSTRAINT fk_tasks_dependencies FOREIGN KEY (task_id) REFERENCES tasks(id),
+				CONSTRAINT fk_task_dependencies_depends_on FOREIGN KEY (depends_on_id) REFERENCES tasks(id)
+			)`)
+			db.Exec("INSERT INTO task_dependencies_new (id, task_id, depends_on_id, type) SELECT id, task_id, depends_on_task_id, type FROM task_dependencies")
+			db.Exec("DROP TABLE task_dependencies")
+			db.Exec("ALTER TABLE task_dependencies_new RENAME TO task_dependencies")
+			db.Exec("COMMIT")
+		}
+	}
+
 	// Initialize vector extension for SQLite
 	sqlDB, err := db.DB()
 	if err != nil {

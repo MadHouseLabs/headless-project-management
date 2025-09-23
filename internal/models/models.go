@@ -126,7 +126,7 @@ type Task struct {
 type TaskDependency struct {
 	ID           uint   `json:"id" gorm:"primaryKey"`
 	TaskID       uint   `json:"task_id" gorm:"not null"`
-	DependsOnID  uint   `json:"depends_on_id" gorm:"not null"`
+	DependsOnID  uint   `json:"depends_on_id" gorm:"column:depends_on_id;not null"`
 	Type         string `json:"type" gorm:"default:'finish_to_start'"` // finish_to_start, start_to_start, etc.
 	Task         *Task  `json:"task,omitempty" gorm:"foreignKey:TaskID"`
 	DependsOn    *Task  `json:"depends_on,omitempty" gorm:"foreignKey:DependsOnID"`
