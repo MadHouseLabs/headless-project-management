@@ -377,6 +377,8 @@ func (h *WebHandler) TaskDetailPage(c *gin.Context) {
 		Preload("Labels").
 		Preload("Subtasks").
 		Preload("AssigneeUser").
+		Preload("Creator").
+		Preload("Updater").
 		First(&task, taskID).Error; err != nil {
 		c.HTML(http.StatusNotFound, "error.html", gin.H{
 			"Error": "Task not found",
@@ -406,12 +408,16 @@ func (h *WebHandler) TaskDetailPage(c *gin.Context) {
 		}
 	}
 
+	// Get task activities (audit trail)
+	activities, _ := h.db.GetTaskActivities(task.ID)
+
 	// Render task detail template
 	c.HTML(http.StatusOK, "task_detail.html", gin.H{
 		"Task":           task,
 		"ProjectID":      projectID,
 		"DependsOnTasks": dependsOnTasks,    // Tasks this task depends on
 		"DependentTasks": dependentTasks,    // Tasks that depend on this task
+		"Activities":     activities,        // Activity timeline
 	})
 }
 

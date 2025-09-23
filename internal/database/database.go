@@ -42,6 +42,7 @@ func NewDatabase(dataDir string) (*Database, error) {
 		&models.Label{},
 		&models.Comment{},
 		&models.Attachment{},
+		&models.Activity{},
 
 		// Auth entities
 		&models.Session{},
@@ -228,6 +229,20 @@ func (db *Database) CreateTask(task *models.Task) error {
 	if err := db.Create(task).Error; err != nil {
 		return err
 	}
+
+	// Log task creation activity
+	var userName string = "System"
+	if task.CreatedBy > 0 {
+		var user models.User
+		if err := db.First(&user, task.CreatedBy).Error; err == nil {
+			userName = user.Username
+		}
+	}
+	var userID *uint
+	if task.CreatedBy > 0 {
+		userID = &task.CreatedBy
+	}
+	_ = db.LogTaskCreated(task.ID, userID, userName)
 
 	// Queue embedding generation for the new task
 	if db.embeddingCallback != nil {
@@ -938,4 +953,54 @@ func (db *Database) DeleteUser(id uint) error {
 	}
 
 	return tx.Commit().Error
+}
+// Activity logging functions
+func (db *Database) LogActivity(taskID uint, userID *uint, userName, action, fieldName, oldValue, newValue, description string) error {
+	activity := &models.Activity{
+		TaskID:      taskID,
+		UserID:      userID,
+		UserName:    userName,
+		Action:      action,
+		FieldName:   fieldName,
+		OldValue:    oldValue,
+		NewValue:    newValue,
+		Description: description,
+	}
+	return db.Create(activity).Error
+}
+
+func (db *Database) LogTaskCreated(taskID uint, userID *uint, userName string) error {
+	return db.LogActivity(taskID, userID, userName, "created", "", "", "", "Task created")
+}
+
+func (db *Database) LogTaskStatusChanged(taskID uint, userID *uint, userName string, oldStatus, newStatus string) error {
+	description := fmt.Sprintf("Status changed from %s to %s", oldStatus, newStatus)
+	return db.LogActivity(taskID, userID, userName, "status_changed", "status", oldStatus, newStatus, description)
+}
+
+func (db *Database) LogTaskAssigned(taskID uint, userID *uint, userName string, oldAssignee, newAssignee string) error {
+	description := fmt.Sprintf("Task assigned to %s", newAssignee)
+	if oldAssignee != "" {
+		description = fmt.Sprintf("Task reassigned from %s to %s", oldAssignee, newAssignee)
+	}
+	return db.LogActivity(taskID, userID, userName, "assigned", "assignee", oldAssignee, newAssignee, description)
+}
+
+func (db *Database) LogTaskPriorityChanged(taskID uint, userID *uint, userName string, oldPriority, newPriority string) error {
+	description := fmt.Sprintf("Priority changed from %s to %s", oldPriority, newPriority)
+	return db.LogActivity(taskID, userID, userName, "priority_changed", "priority", oldPriority, newPriority, description)
+}
+
+func (db *Database) LogTaskUpdated(taskID uint, userID *uint, userName string, fieldName, oldValue, newValue string) error {
+	description := fmt.Sprintf("%s updated", fieldName)
+	return db.LogActivity(taskID, userID, userName, "updated", fieldName, oldValue, newValue, description)
+}
+
+func (db *Database) GetTaskActivities(taskID uint) ([]models.Activity, error) {
+	var activities []models.Activity
+	err := db.Preload("User").
+		Where("task_id = ?", taskID).
+		Order("created_at DESC").
+		Find(&activities).Error
+	return activities, err
 }

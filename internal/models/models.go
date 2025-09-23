@@ -120,6 +120,7 @@ type Task struct {
 	Labels          []Label      `json:"labels,omitempty" gorm:"many2many:task_labels;"`
 	Watchers        []User       `json:"watchers,omitempty" gorm:"many2many:task_watchers;"`
 	Dependencies    []TaskDependency `json:"dependencies,omitempty" gorm:"foreignKey:TaskID"`
+	Activities      []Activity   `json:"activities,omitempty" gorm:"foreignKey:TaskID"`
 }
 
 // TaskDependency represents a dependency between tasks
@@ -139,6 +140,22 @@ type Comment struct {
 	Author    string    `json:"author" gorm:"not null"`
 	CreatedAt time.Time `json:"created_at"`
 	Task      *Task     `json:"task,omitempty" gorm:"foreignKey:TaskID"`
+}
+
+// Activity represents an audit log entry for task changes
+type Activity struct {
+	ID          uint      `json:"id" gorm:"primaryKey"`
+	TaskID      uint      `json:"task_id" gorm:"not null"`
+	UserID      *uint     `json:"user_id"`
+	UserName    string    `json:"user_name"` // Store username in case user is deleted
+	Action      string    `json:"action" gorm:"not null"` // created, updated, status_changed, assigned, etc.
+	FieldName   string    `json:"field_name"`   // Which field was changed
+	OldValue    string    `json:"old_value"`    // Previous value
+	NewValue    string    `json:"new_value"`    // New value
+	Description string    `json:"description"`  // Human-readable description
+	CreatedAt   time.Time `json:"created_at"`
+	Task        *Task     `json:"task,omitempty" gorm:"foreignKey:TaskID"`
+	User        *User     `json:"user,omitempty" gorm:"foreignKey:UserID"`
 }
 
 type Attachment struct {
