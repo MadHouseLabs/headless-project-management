@@ -219,11 +219,18 @@ func (h *WebHandler) ProjectOverviewPage(c *gin.Context) {
 		Limit(5).
 		Find(&recentTasks)
 
+	// Render markdown description
+	var renderedDescription template.HTML
+	if project.Description != "" {
+		renderedDescription = RenderMarkdown(project.Description)
+	}
+
 	// Render template
 	c.HTML(http.StatusOK, "project_overview.html", gin.H{
 		"Project":     project,
 		"Stats":       stats,
 		"RecentTasks": recentTasks,
+		"RenderedDescription": renderedDescription,
 	})
 }
 
@@ -719,6 +726,12 @@ func (h *WebHandler) EpicDetailPage(c *gin.Context) {
 		tasksByStatus[status] = tasks
 	}
 
+	// Render markdown description
+	var renderedDescription template.HTML
+	if epic.Description != "" {
+		renderedDescription = RenderMarkdown(epic.Description)
+	}
+
 	// Render epic detail template
 	c.HTML(http.StatusOK, "epic_detail.html", gin.H{
 		"Project":        project,
@@ -726,6 +739,7 @@ func (h *WebHandler) EpicDetailPage(c *gin.Context) {
 		"TotalTasks":     len(epic.Tasks),
 		"CompletedTasks": completedTasks,
 		"TasksByStatus":  tasksByStatus,
+		"RenderedDescription": renderedDescription,
 	})
 }
 

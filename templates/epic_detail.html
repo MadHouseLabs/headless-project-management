@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{.Epic.Name}} - Epic Details</title>
+    <link rel="stylesheet" href="/static/css/common.css">
     <link rel="stylesheet" href="/static/css/style.C9v57W26.css">
     <style>
         .breadcrumb {
@@ -126,7 +127,9 @@
     <main>
         <div class="epic-header">
             <h2>{{.Epic.Name}}</h2>
-            {{if .Epic.Description}}
+            {{if .RenderedDescription}}
+            <div style="margin: 1rem 0; color: #333; line-height: 1.6;">{{.RenderedDescription}}</div>
+            {{else if .Epic.Description}}
             <p style="margin: 1rem 0; color: #666;">{{.Epic.Description}}</p>
             {{end}}
             <div class="epic-meta">
