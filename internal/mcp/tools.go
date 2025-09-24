@@ -757,6 +757,32 @@ func (s *EnhancedMCPServer) listComments(args []byte) (*ToolResponse, error) {
 	return SuccessResponse(comments), nil
 }
 
+func (s *EnhancedMCPServer) deleteComment(args []byte) (*ToolResponse, error) {
+	var input struct {
+		CommentID uint `json:"comment_id"`
+	}
+	if err := UnmarshalArgs(args, &input); err != nil {
+		return ErrorResponse(err), nil
+	}
+
+	// Get the comment first to verify it exists
+	comment, err := s.db.GetComment(input.CommentID)
+	if err != nil {
+		return ErrorResponse(fmt.Errorf("comment not found: %w", err)), nil
+	}
+
+	// Delete the comment
+	if err := s.db.DeleteComment(input.CommentID); err != nil {
+		return ErrorResponse(err), nil
+	}
+
+	return SuccessResponse(map[string]interface{}{
+		"deleted":    true,
+		"comment_id": input.CommentID,
+		"task_id":    comment.TaskID,
+	}), nil
+}
+
 // Task dependency operations
 func (s *EnhancedMCPServer) addTaskDependency(args []byte) (*ToolResponse, error) {
 	var input struct {

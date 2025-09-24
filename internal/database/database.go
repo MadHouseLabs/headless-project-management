@@ -443,6 +443,10 @@ func (db *Database) GetComment(commentID uint) (*models.Comment, error) {
 	return &comment, err
 }
 
+func (db *Database) DeleteComment(commentID uint) error {
+	return db.Delete(&models.Comment{}, commentID).Error
+}
+
 func (db *Database) AddAttachment(attachment *models.Attachment) error {
 	return db.Create(attachment).Error
 }

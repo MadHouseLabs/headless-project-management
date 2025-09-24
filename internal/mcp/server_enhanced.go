@@ -93,6 +93,7 @@ func (s *EnhancedMCPServer) getToolHandlers() map[string]func([]byte) (*ToolResp
 		// Comments
 		"add_comment":    s.addComment,
 		"update_comment": s.updateComment,
+		"delete_comment": s.deleteComment,
 		"list_comments":  s.listComments,
 
 		// Task Dependencies
