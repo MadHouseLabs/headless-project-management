@@ -11,8 +11,8 @@
 .env
 .env.local
 
-# Build artifacts
-/server
+# Build artifacts (commented out for optimized build)
+# /server  # Need this for optimized Dockerfile
 /main
 *.exe
 

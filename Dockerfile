@@ -1,32 +1,8 @@
-# Build stage
-FROM golang:1.23-bookworm AS builder
-
-WORKDIR /app
-
-# Install build dependencies
-RUN apt-get update && apt-get install -y \
-    gcc \
-    g++ \
-    sqlite3 \
-    libsqlite3-dev \
-    && rm -rf /var/lib/apt/lists/*
-
-# Copy go mod files
-COPY go.mod go.sum ./
-RUN go mod download
-
-# Copy source code
-COPY . .
-
-# Build the application
-ENV CGO_ENABLED=1
-ENV GOOS=linux
-ENV GOARCH=amd64
-RUN go build -o server cmd/server/main.go
-
-# Final stage
+# Optimized Dockerfile using pre-built binary
+# This expects the Go binary to be built outside the container
 FROM debian:bookworm-slim
 
+# Install runtime dependencies only
 RUN apt-get update && apt-get install -y \
     ca-certificates \
     sqlite3 \
@@ -34,16 +10,19 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
-# Copy binary from builder
-COPY --from=builder /app/server .
+# Copy pre-built binary (built in CI pipeline)
+COPY server .
 
 # Copy templates and static files
-COPY --from=builder /app/templates ./templates
-COPY --from=builder /app/web/dist ./web/dist
+COPY templates ./templates
+COPY web/dist ./web/dist
 
 # Copy entrypoint script
 COPY docker-entrypoint.sh /app/docker-entrypoint.sh
 RUN chmod +x /app/docker-entrypoint.sh
+
+# Create data directory
+RUN mkdir -p /data
 
 # Expose port
 EXPOSE 8080
