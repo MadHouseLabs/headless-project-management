@@ -112,12 +112,9 @@ Access tools at `/mcp/tools` and resources at `/mcp/resources`.
 
 ## Deployment Architecture
 
-### Critical: SQLite & Azure Files Incompatibility
-SQLite's file locking is incompatible with Azure Files (SMB/CIFS). The Docker entrypoint implements a sync mechanism:
-1. Database copied from Azure Files to `/tmp/db` on startup
-2. Background sync every 5 minutes back to Azure Files
-3. Sync on shutdown via signal trapping
-4. Set `DATABASE_DIR=/tmp` in container
+### Database Storage
+The application uses SQLite with the database stored directly on the mounted Azure Files volume at `/data/db/projects.db`.
+The `DATABASE_DIR` environment variable is set to `/data` to use the mounted volume directly.
 
 ### GitHub Actions Deployment
 Workflow (`.github/workflows/deploy.yml`):
@@ -128,8 +125,8 @@ Workflow (`.github/workflows/deploy.yml`):
 ## Common Issues & Solutions
 
 ### "unable to open database file"
-**Cause**: SQLite file locking incompatibility with network filesystems
-**Solution**: Ensure `DATABASE_DIR` points to local filesystem in container
+**Cause**: Database directory not properly mounted or permissions issue
+**Solution**: Ensure `/data` volume is properly mounted and has correct permissions
 
 ### Vector search returns no results
 1. Check embeddings: `SELECT COUNT(*) FROM embeddings`
@@ -161,7 +158,7 @@ Workflow (`.github/workflows/deploy.yml`):
 ## Important Notes
 
 - Server runs on `localhost:8080` by default
-- Database stored in `./data/db/projects.db` (note: different path in Docker)
+- Database stored in `./data/db/projects.db` (same path in Docker with mounted volume)
 - Uploads stored in `./data/uploads/`
 - JWT auth required for API endpoints (`/api/*`)
 - MCP endpoints (`/mcp/*`) require JWT authentication
