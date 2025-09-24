@@ -376,16 +376,16 @@
             </section>
         </div>
 
-        {{if .Task.Comments}}
+        {{if .RenderedComments}}
         <section style="margin-top: 2rem;">
-            <h3>Comments ({{len .Task.Comments}})</h3>
-            {{range .Task.Comments}}
+            <h3>Comments ({{len .RenderedComments}})</h3>
+            {{range .RenderedComments}}
             <div class="comment">
                 <div class="comment-header">
                     <strong>{{.Author}}</strong>
                     <span class="muted" style="font-size: 11px;">{{.CreatedAt.Format "Jan 2, 2006 at 3:04 PM"}}</span>
                 </div>
-                <div>{{.Content}}</div>
+                <div class="description-box" style="margin-top: 0.5rem;">{{.RenderedContent}}</div>
             </div>
             {{end}}
         </section>

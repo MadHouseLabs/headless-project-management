@@ -433,6 +433,16 @@ func (db *Database) AddComment(comment *models.Comment) error {
 	return db.Create(comment).Error
 }
 
+func (db *Database) UpdateComment(commentID uint, content string) error {
+	return db.Model(&models.Comment{}).Where("id = ?", commentID).Update("content", content).Error
+}
+
+func (db *Database) GetComment(commentID uint) (*models.Comment, error) {
+	var comment models.Comment
+	err := db.First(&comment, commentID).Error
+	return &comment, err
+}
+
 func (db *Database) AddAttachment(attachment *models.Attachment) error {
 	return db.Create(attachment).Error
 }

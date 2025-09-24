@@ -527,11 +527,25 @@ func (h *WebHandler) TaskDetailPage(c *gin.Context) {
 		renderedDescription = RenderMarkdown(task.Description)
 	}
 
+	// Render markdown for each comment
+	type RenderedComment struct {
+		models.Comment
+		RenderedContent template.HTML
+	}
+	var renderedComments []RenderedComment
+	for _, comment := range task.Comments {
+		renderedComments = append(renderedComments, RenderedComment{
+			Comment:         comment,
+			RenderedContent: RenderMarkdown(comment.Content),
+		})
+	}
+
 	// Render task detail template
 	c.HTML(http.StatusOK, "task_detail.html", gin.H{
 		"Task":                task,
 		"ProjectID":           projectID,
 		"RenderedDescription": renderedDescription,  // Markdown-rendered description
+		"RenderedComments":    renderedComments,     // Comments with rendered markdown
 		"DependsOnTasks":      dependsOnTasks,       // Tasks this task depends on
 		"DependentTasks":      dependentTasks,       // Tasks that depend on this task
 		"Activities":          activities,           // Activity timeline

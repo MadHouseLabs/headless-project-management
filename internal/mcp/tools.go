@@ -714,6 +714,31 @@ func (s *EnhancedMCPServer) addComment(args []byte) (*ToolResponse, error) {
 	return SuccessResponse(comment), nil
 }
 
+func (s *EnhancedMCPServer) updateComment(args []byte) (*ToolResponse, error) {
+	var input struct {
+		CommentID uint   `json:"comment_id"`
+		Content   string `json:"content"`
+	}
+	if err := UnmarshalArgs(args, &input); err != nil {
+		return ErrorResponse(err), nil
+	}
+
+	// Get the existing comment first to verify it exists
+	comment, err := s.db.GetComment(input.CommentID)
+	if err != nil {
+		return ErrorResponse(fmt.Errorf("comment not found: %w", err)), nil
+	}
+
+	// Update the comment content
+	if err := s.db.UpdateComment(input.CommentID, input.Content); err != nil {
+		return ErrorResponse(err), nil
+	}
+
+	// Return the updated comment
+	comment.Content = input.Content
+	return SuccessResponse(comment), nil
+}
+
 func (s *EnhancedMCPServer) listComments(args []byte) (*ToolResponse, error) {
 	var input struct {
 		TaskID uint `json:"task_id"`

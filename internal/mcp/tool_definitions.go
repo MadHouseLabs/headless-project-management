@@ -347,7 +347,7 @@ func toolDefinitions() []Tool {
 			},
 		},
 
-		// Comments/Notes (2 tools)
+		// Comments/Notes (3 tools)
 		{
 			Name:        "add_comment",
 			Description: "Add a comment/note to a task",
@@ -359,6 +359,18 @@ func toolDefinitions() []Tool {
 					"author":  map[string]string{"type": "string"},
 				},
 				"required": []string{"task_id", "content", "author"},
+			},
+		},
+		{
+			Name:        "update_comment",
+			Description: "Update an existing comment/note",
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"comment_id": map[string]string{"type": "number"},
+					"content":    map[string]string{"type": "string"},
+				},
+				"required": []string{"comment_id", "content"},
 			},
 		},
 		{
