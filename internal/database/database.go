@@ -323,6 +323,19 @@ func (db *Database) UpdateTask(task *models.Task) error {
 					}
 				}
 			}
+		} else if oldTask.Status == models.TaskStatusDone && task.Status != models.TaskStatusDone {
+			// Task is being reopened - clear completed_at
+			task.CompletedAt = nil
+
+			// Log status change
+			userName := "System"
+			if task.UpdatedBy != nil && *task.UpdatedBy > 0 {
+				var user models.User
+				if err := db.First(&user, *task.UpdatedBy).Error; err == nil {
+					userName = user.Username
+				}
+			}
+			_ = db.LogTaskStatusChanged(task.ID, task.UpdatedBy, userName, string(oldTask.Status), string(task.Status))
 		} else if oldTask.Status != task.Status {
 			// Log any other status change
 			userName := "System"

@@ -309,12 +309,19 @@ func (h *WebHandler) ProjectBoardPage(c *gin.Context) {
 	var filteredTasks []models.Task
 	var archivedCount int
 	for _, task := range tasks {
-		// Keep task if it's not done, or if it's done but completed within the last 2 days
-		if task.Status != models.TaskStatusDone ||
-		   (task.CompletedAt != nil && task.CompletedAt.After(twoDaysAgo)) {
+		// Archive done tasks only if they have a completed_at timestamp older than 2 days
+		// Keep all non-done tasks and done tasks that are recent or have no completion timestamp
+		if task.Status != models.TaskStatusDone {
+			// Not done - keep it
+			filteredTasks = append(filteredTasks, task)
+		} else if task.CompletedAt == nil {
+			// Done but no completed_at - keep it (shouldn't happen but handle gracefully)
+			filteredTasks = append(filteredTasks, task)
+		} else if task.CompletedAt.After(twoDaysAgo) {
+			// Done and completed recently - keep it
 			filteredTasks = append(filteredTasks, task)
 		} else {
-			// Count archived tasks (done and older than 2 days)
+			// Done and completed more than 2 days ago - archive it
 			archivedCount++
 		}
 	}
