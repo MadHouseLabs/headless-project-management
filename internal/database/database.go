@@ -228,6 +228,16 @@ func (db *Database) DeleteProject(id uint) error {
 }
 
 func (db *Database) CreateTask(task *models.Task) error {
+	// Validate status if provided (should be todo for new tasks)
+	if task.Status != "" && !models.IsValidTaskStatus(string(task.Status)) {
+		return fmt.Errorf("invalid task status: %s", task.Status)
+	}
+
+	// Validate priority if provided
+	if task.Priority != "" && !models.IsValidTaskPriority(string(task.Priority)) {
+		return fmt.Errorf("invalid task priority: %s", task.Priority)
+	}
+
 	if err := db.Create(task).Error; err != nil {
 		return err
 	}
@@ -286,6 +296,18 @@ func (db *Database) ListTasks(projectID *uint, status *models.TaskStatus) ([]mod
 }
 
 func (db *Database) UpdateTask(task *models.Task) error {
+	// Validate status if provided
+	if task.Status != "" && !models.IsValidTaskStatus(string(task.Status)) {
+		return fmt.Errorf("invalid task status: %s. Valid values: %v",
+			task.Status, models.GetValidTaskStatuses())
+	}
+
+	// Validate priority if provided
+	if task.Priority != "" && !models.IsValidTaskPriority(string(task.Priority)) {
+		return fmt.Errorf("invalid task priority: %s. Valid values: %v",
+			task.Priority, models.GetValidTaskPriorities())
+	}
+
 	// Get the old task to check for status changes
 	var oldTask models.Task
 	if err := db.First(&oldTask, task.ID).Error; err == nil {

@@ -31,6 +31,50 @@ const (
 	TaskPriorityUrgent TaskPriority = "urgent"
 )
 
+// IsValidTaskStatus checks if the given status is valid
+func IsValidTaskStatus(status string) bool {
+	validStatuses := map[string]bool{
+		string(TaskStatusTodo):       true,
+		string(TaskStatusInProgress): true,
+		string(TaskStatusReview):     true,
+		string(TaskStatusDone):       true,
+		string(TaskStatusCancelled):  true,
+	}
+	return validStatuses[status]
+}
+
+// IsValidTaskPriority checks if the given priority is valid
+func IsValidTaskPriority(priority string) bool {
+	validPriorities := map[string]bool{
+		string(TaskPriorityLow):    true,
+		string(TaskPriorityMedium): true,
+		string(TaskPriorityHigh):   true,
+		string(TaskPriorityUrgent): true,
+	}
+	return validPriorities[priority]
+}
+
+// GetValidTaskStatuses returns a list of valid task statuses
+func GetValidTaskStatuses() []string {
+	return []string{
+		string(TaskStatusTodo),
+		string(TaskStatusInProgress),
+		string(TaskStatusReview),
+		string(TaskStatusDone),
+		string(TaskStatusCancelled),
+	}
+}
+
+// GetValidTaskPriorities returns a list of valid task priorities
+func GetValidTaskPriorities() []string {
+	return []string{
+		string(TaskPriorityLow),
+		string(TaskPriorityMedium),
+		string(TaskPriorityHigh),
+		string(TaskPriorityUrgent),
+	}
+}
+
 type SprintStatus string
 
 const (

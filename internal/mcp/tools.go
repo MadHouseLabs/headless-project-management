@@ -129,6 +129,10 @@ func (s *EnhancedMCPServer) createTask(args []byte) (*ToolResponse, error) {
 	}
 
 	if input.Priority != "" {
+		if !models.IsValidTaskPriority(input.Priority) {
+			return ErrorResponse(fmt.Errorf("invalid priority '%s'. Valid values: %v",
+				input.Priority, models.GetValidTaskPriorities())), nil
+		}
 		task.Priority = models.TaskPriority(input.Priority)
 	}
 	if input.AssigneeID > 0 {
@@ -197,9 +201,17 @@ func (s *EnhancedMCPServer) updateTask(args []byte) (*ToolResponse, error) {
 		task.Description = input.Description
 	}
 	if input.Status != "" {
+		if !models.IsValidTaskStatus(input.Status) {
+			return ErrorResponse(fmt.Errorf("invalid status '%s'. Valid values: %v",
+				input.Status, models.GetValidTaskStatuses())), nil
+		}
 		task.Status = models.TaskStatus(input.Status)
 	}
 	if input.Priority != "" {
+		if !models.IsValidTaskPriority(input.Priority) {
+			return ErrorResponse(fmt.Errorf("invalid priority '%s'. Valid values: %v",
+				input.Priority, models.GetValidTaskPriorities())), nil
+		}
 		task.Priority = models.TaskPriority(input.Priority)
 	}
 	if input.AssigneeID > 0 {
